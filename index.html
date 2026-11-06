@@ -869,7 +869,7 @@ window.PROOVA_CONFIG = {
       label: 'Maison & appartement',
       short: 'Maison',
       unit: 'surface',
-      min: 15, max: 500, default: 70, step: 5,
+      min: 15, max: 300, default: 70, step: 5,
       formulas: {
         regular: { label: 'Entretien', desc: 'Sols, poussière, cuisine, salle de bain.', mult: 1 },
         deep:    { label: 'Grand nettoyage', desc: 'Tout l’entretien, plus les recoins, plinthes et placards.', mult: 1.6 },
@@ -887,11 +887,10 @@ window.PROOVA_CONFIG = {
       label: 'Bureaux & locaux',
       short: 'Locaux',
       unit: 'surface',
-      min: 20, max: 3000, default: 120, step: 10,
+      min: 20, max: 400, default: 120, step: 10,
       formulas: {
         standard:     { label: 'Entretien', desc: 'Postes de travail, sols, sanitaires, poubelles.', mult: 1 },
         deep:         { label: 'Grand nettoyage', desc: 'Dépoussiérage complet, mobilier, recoins.', mult: 1.7 },
-        construction: { label: 'Fin de chantier', desc: 'Poussière de travaux, traces de peinture et de plâtre.', mult: 2.6 },
       },
       options: {
         windows:  { label: 'Vitres', hours: (s) => s / 50 },
@@ -920,22 +919,20 @@ window.PROOVA_CONFIG = {
         pet_hair:   { label: 'Poils d’animaux', flat: 25 },
         seats:      { label: 'Shampoing sièges', flat: 40 },
         engine:     { label: 'Compartiment moteur', flat: 30 },
-        headlights: { label: 'Rénovation phares', flat: 20 },
       },
     },
     outdoor: {
       label: 'Extérieur & terrain',
       short: 'Extérieur',
       unit: 'surface',
-      min: 5, max: 5000, default: 40, step: 5,
+      min: 5, max: 300, default: 40, step: 5,
       formulas: {
         terrace:   { label: 'Terrasse & balcon', desc: 'Haute pression, mousses, joints.', rate: 30 },
         garden:    { label: 'Jardin', desc: 'Feuilles, désherbage, allées.', rate: 60 },
-        clearance: { label: 'Débarras', desc: 'Cave, grenier, garage vidés et balayés.', rate: 12 },
       },
       options: {
         furniture: { label: 'Mobilier de jardin', hours: () => 0.75 },
-        waste:     { label: 'Évacuation des déchets', flat: 60 },
+        waste:     { label: 'Évacuation des déchets verts', flat: 60 },
       },
     },
   };
@@ -1154,7 +1151,7 @@ window.PROOVA_CONFIG = {
     mission(camille, 'car', 'complete', { size: 'city', options: [] }, at(5, 15), 'pending');
     mission(clients[2], 'home', 'move', { surface: 90, options: ['windows', 'oven', 'fridge', 'balcony'] }, at(3, 8), 'pending');
     mission(clients[5], 'office', 'standard', { surface: 160, options: ['sanitary'] }, at(1, 18), 'pending');
-    mission(clients[4], 'car', 'premium', { size: 'suv', options: ['headlights'] }, at(4, 10), 'pending');
+    mission(clients[4], 'car', 'premium', { size: 'suv', options: ['seats'] }, at(4, 10), 'pending');
     const msgAt = (mins) => new Date(Date.now() - mins * 60e3).toISOString();
     db.messages.push(
       { id: uuid(), mission_id: upcoming, sender_id: luca, body: `Bonjour Camille, c’est noté pour ${new Date(db.missions[upcoming].scheduled_at).toLocaleDateString('fr-CH', { weekday: 'long' })} 9 h. Il y a un code pour l’immeuble ?`, created_at: msgAt(180) },
@@ -2318,7 +2315,7 @@ function quoteTicket() {
       </div>
       ${def.unit === 'surface' ? html`<div class="q-row">
         <label class="q-label" for="q-surface">Surface <output id="q-surface-out">${b.surface} m²</output></label>
-        <input type="range" id="q-surface" min="${def.min}" max="${Math.min(def.max, b.service === 'office' ? 1000 : 300)}"
+        <input type="range" id="q-surface" min="${def.min}" max="${def.max}"
           step="${def.step}" value="${b.surface}" data-input="q-surface">
       </div>` : html`<div class="q-row">
         <span class="q-label" id="q-size-l">Véhicule</span>
@@ -2712,8 +2709,8 @@ FORMS.reset = async (form, btn) => {
 
 // ---------------------------------------------------------------- photos (Unsplash, licence libre d'utilisation)
 const PHOTOS = [
-  { id: 'photo-1758686254555-9bcaba0dd46d', alt: 'Un couple de retraités danse en riant dans leur salon' },
   { id: 'photo-1758691031402-5cfbeebc6162', alt: 'Un couple âgé souriant, enlacé sur leur canapé' },
+  { id: 'photo-1758686254555-9bcaba0dd46d', alt: 'Un couple de retraités danse en riant dans leur salon' },
   { id: 'photo-1758686253896-e6c76b6f7aa1', alt: 'Une femme âgée souriante, chez elle, lève le pouce' },
 ];
 const photoUrl = (id, w) => `https://images.unsplash.com/${id}?auto=format&fit=crop&crop=faces&w=${w}&q=70`;
@@ -3145,8 +3142,8 @@ function stepDetails(b) {
   const def = P.SERVICES[b.service];
   return html`${def.unit === 'surface' ? html`<h2 class="step-title">Surface à nettoyer</h2>
       <div class="surface">
-        <input type="range" min="${def.min}" max="${Math.min(def.max, b.service === 'office' ? 1000 : 300)}" step="${def.step}"
-          value="${Math.min(b.surface, b.service === 'office' ? 1000 : 300)}" data-input="b-surface-range" aria-label="Surface en mètres carrés">
+        <input type="range" min="${def.min}" max="${def.max}" step="${def.step}"
+          value="${Math.min(b.surface, def.max)}" data-input="b-surface-range" aria-label="Surface en mètres carrés">
         <label class="surface-num"><input type="number" inputmode="numeric" min="${def.min}" max="${def.max}" value="${b.surface}"
           data-input="b-surface-num" aria-label="Surface exacte"><span>m²</span></label>
       </div>
