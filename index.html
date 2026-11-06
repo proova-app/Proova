@@ -2017,7 +2017,8 @@ const CHANGES = {};
 
 function parseHash() {
   const h = decodeURIComponent(location.hash.replace(/^#/, ''));
-  if (!h || /[=&?]/.test(h)) return { name: S.session ? 'role-home' : 'home' };
+  if (!h) return { name: 'home' }; // l'adresse du site montre toujours la page d'accueil, connecté ou non
+  if (/[=&?]/.test(h)) return { name: S.session ? 'role-home' : 'home' };
   if (h.startsWith('m-')) return { name: 'mission', id: h.slice(2) };
   return { name: ROUTES[h] || (S.session ? 'role-home' : 'home') };
 }
