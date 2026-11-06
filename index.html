@@ -646,6 +646,46 @@ a.mini-main:hover strong { text-decoration: underline; text-underline-offset: 3p
 .pcard-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 #adm-table { margin-top: 0; }
 
+/* ---------------------------------------------------------------- candidature */
+.group { border: 0; margin: 0; padding: 18px 0 0; border-top: 1.5px solid var(--mist); display: grid; gap: 14px; min-width: 0; }
+.group > legend { font-size: 17px; font-weight: 700; padding: 0; margin-bottom: 4px; float: left; width: 100%; }
+.group > legend + * { clear: both; }
+.form > .group:first-of-type { border-top: 0; padding-top: 0; }
+.seg-2, .seg-3 { display: grid; gap: 4px; padding: 4px; background: var(--mist); border-radius: 14px; }
+.seg-2 { grid-template-columns: 1fr 1fr; }
+.seg-3 { grid-template-columns: repeat(3, 1fr); }
+.seg-opt { position: relative; cursor: pointer; }
+.seg-opt input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.seg-opt span { display: grid; place-items: center; min-height: 42px; padding: 6px 8px; border-radius: 10px; font-weight: 600; font-size: 15px; color: var(--ink-2); text-align: center; line-height: 1.2; }
+.seg-opt input:checked + span { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(15, 39, 65, .14); }
+.seg-opt input:focus-visible + span { outline: 3px solid var(--lake); }
+.combo { position: relative; display: block; }
+.combo-list {
+  position: absolute; z-index: 15; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px; list-style: none;
+  background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px; box-shadow: 0 14px 30px -14px rgba(15, 39, 65, .4);
+  max-height: 280px; overflow-y: auto;
+}
+.combo-list li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 11px 12px; border-radius: 9px; cursor: pointer; font-weight: 600; }
+.combo-list li small { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+.combo-list li:hover, .combo-list li[aria-selected="true"] { background: var(--paper); }
+.city-hint.is-ok { color: var(--ok); font-weight: 600; }
+.city-hint.is-warn { color: var(--wait); }
+.check-sm { padding: 10px 12px; font-size: 14px; font-weight: 500; }
+.check-line { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; cursor: pointer; }
+.check-line input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--ink); flex: none; }
+.avail-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.avail-out { color: var(--ink); font-weight: 700; }
+.avail-scale { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-top: -6px; }
+.chip-check { position: relative; }
+.chip-check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.chip-check:has(input:checked) { background: var(--ink); border-color: var(--ink); color: #fff; }
+.chip-check:has(input:focus-visible) { outline: 3px solid var(--lake); outline-offset: 2px; }
+.pcard-more summary { cursor: pointer; font-weight: 700; font-size: 15px; color: var(--ink-2); }
+.app-facts { margin: 10px 0 0; display: grid; gap: 8px; }
+.app-facts div { display: grid; grid-template-columns: 128px 1fr; gap: 10px; font-size: 14px; }
+.app-facts dt { color: var(--muted); }
+.app-facts dd { margin: 0; font-weight: 500; }
+
 /* ---------------------------------------------------------------- chargement */
 .skeleton { display: grid; gap: 14px; }
 .sk { background: linear-gradient(90deg, var(--mist), #f4f7fa, var(--mist)); background-size: 200% 100%; border-radius: 12px; animation: sk 1.2s infinite linear; }
@@ -949,7 +989,7 @@ window.PROOVA_CONFIG = {
    Chaque onglet a sa propre session : ouvrez un onglet client et un onglet prestataire
    pour voir les mises à jour passer de l'un à l'autre. */
 (function (root) {
-  const KEY = 'proova_demo_v2';
+  const KEY = 'proova_demo_v3';
   const SKEY = 'proova_demo_session';
   const DEMO_PASSWORD = 'demo1234';
 
@@ -991,7 +1031,7 @@ window.PROOVA_CONFIG = {
   // ---------------------------------------------------------------- données de démonstration
   async function buildSeed() {
     const P = root.Pricing;
-    const db = { v: 2, seededAt: Date.now(), users: [], profiles: {}, missions: {}, messages: [], settings: clone(P.DEFAULT_SETTINGS) };
+    const db = { v: 3, seededAt: Date.now(), users: [], profiles: {}, missions: {}, messages: [], settings: clone(P.DEFAULT_SETTINGS) };
     const day = 24 * 3600e3;
     const at = (days, hour) => {
       const d = new Date(Date.now() + days * day);
@@ -1012,14 +1052,22 @@ window.PROOVA_CONFIG = {
     const admin = await user('admin@proova.demo', 'admin', 'Équipe Proova');
     const camille = await user('client@proova.demo', 'client', 'Camille Rochat', { city: 'Lausanne' });
     const luca = await user('pro@proova.demo', 'provider', 'Luca Moretti', {
-      services: ['home', 'office', 'car'], city: 'Renens',
+      services: ['home', 'office', 'car'], city: 'Renens', country: 'CH', postal_code: '1020',
+      application: { qualification: 'cfc', experience: 'gt5', equipment_level: 'full', equipment: ['vacuum', 'steam', 'products', 'carwash'],
+        vehicle: true, availability: 4, slots: ['morning', 'afternoon'], siret: 'CHE-482.115.903', insured: true },
       bio: 'Six ans d’expérience en entretien et fins de bail. Je travaille avec mes propres produits écologiques.' });
     const sofia = await user('sofia@proova.demo', 'provider', 'Sofia Almeida', {
-      services: ['home', 'outdoor'], city: 'Pully', bio: 'Spécialiste grands nettoyages et terrasses.' });
+      services: ['home', 'outdoor'], city: 'Pully', country: 'CH', postal_code: '1009',
+      application: { qualification: 'afp', experience: 'y3_5', equipment_level: 'full', equipment: ['vacuum', 'pressure', 'products', 'ladder'],
+        vehicle: true, availability: 3, slots: ['morning', 'weekend'], siret: '', insured: true }, bio: 'Spécialiste grands nettoyages et terrasses.' });
     const marc = await user('marc@proova.demo', 'provider', 'Marc Dubois', {
-      services: ['office', 'car'], city: 'Morges', bio: 'Bureaux le soir et lavage auto à domicile.' });
+      services: ['office', 'car'], city: 'Morges', country: 'CH', postal_code: '1110',
+      application: { qualification: 'detailing', experience: 'y1_3', equipment_level: 'partial', equipment: ['vacuum', 'carwash'],
+        vehicle: true, availability: 2, slots: ['evening'], siret: '', insured: false }, bio: 'Bureaux le soir et lavage auto à domicile.' });
     await user('nina@proova.demo', 'provider', 'Nina Favre', {
-      services: ['home'], city: 'Prilly', provider_status: 'pending', bio: 'Je débute à mon compte après 3 ans en entreprise de nettoyage.' });
+      services: ['home'], city: 'Prilly', country: 'CH', postal_code: '1008', provider_status: 'pending',
+      application: { qualification: 'none', experience: 'y1_3', equipment_level: 'partial', equipment: ['vacuum', 'products'],
+        vehicle: false, availability: 5, slots: ['morning', 'afternoon', 'weekend'], siret: '', insured: false }, bio: 'Je débute à mon compte après 3 ans en entreprise de nettoyage.' });
     const clients = [camille];
     for (const [n, c] of [['Julien Perret', 'Pully'], ['Aline Gerber', 'Lausanne'], ['Thomas Keller', 'Morges'],
       ['Sarah Ben Ali', 'Renens'], ['Bureau Marchand SA', 'Lausanne']]) {
@@ -1123,7 +1171,7 @@ window.PROOVA_CONFIG = {
     async init() {
       let db = null;
       try { db = JSON.parse(LS.getItem(KEY)); } catch (e) { db = null; }
-      if (!db || db.v !== 2) {
+      if (!db || db.v !== 3) {
         db = await buildSeed();
         this._save(db);
       }
@@ -1181,7 +1229,7 @@ window.PROOVA_CONFIG = {
       return me ? { user: { id: me.id, email: me.email } } : null;
     }
 
-    async signUp({ email, password, full_name, phone, city, role, services }) {
+    async signUp({ email, password, full_name, phone, city, role, services, country, postal_code, application }) {
       email = String(email || '').trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ApiError('Adresse email invalide');
       if (String(password || '').length < 8) throw new ApiError('Le mot de passe doit faire au moins 8 caractères');
@@ -1197,6 +1245,8 @@ window.PROOVA_CONFIG = {
           city: String(city || '').slice(0, 80),
           services: r === 'provider' ? [...new Set((services || []).filter((x) => ['home', 'office', 'car', 'outdoor'].includes(x)))] : [],
           bio: '', provider_status: r === 'provider' ? 'pending' : null,
+          country: ['CH', 'FR'].includes(country) ? country : null, postal_code: String(postal_code || '').slice(0, 12),
+          application: r === 'provider' && application && JSON.stringify(application).length <= 4000 ? clone(application) : {},
           available: true, rating_avg: 0, rating_count: 0, created_at: nowIso(),
         };
         return id;
@@ -1236,9 +1286,11 @@ window.PROOVA_CONFIG = {
     async updateProfile(fields) {
       return this._tx((db) => {
         const me = this._need(db);
-        for (const k of ['full_name', 'phone', 'city', 'services', 'bio', 'available']) {
+        for (const k of ['full_name', 'phone', 'city', 'services', 'bio', 'available', 'country', 'postal_code', 'application']) {
           if (k in fields) me[k] = fields[k];
         }
+        if (me.country && !['CH', 'FR'].includes(me.country)) throw new ApiError('Pays inconnu');
+        if (me.application && JSON.stringify(me.application).length > 4000) throw new ApiError('Candidature trop longue');
         me.services = (me.services || []).filter((s) => ['home', 'office', 'car', 'outdoor'].includes(s));
         return clone(me);
       });
@@ -1573,11 +1625,15 @@ window.PROOVA_CONFIG = {
 
     _redirect() { return root.location.origin + root.location.pathname; }
 
-    async signUp({ email, password, full_name, phone, city, role, services }) {
+    async signUp({ email, password, full_name, phone, city, role, services, country, postal_code, application }) {
       if (String(password || '').length < 8) throw new root.ApiError('Le mot de passe doit faire au moins 8 caractères');
       const data = await this._q(this.sb.auth.signUp({
         email: String(email).trim(), password,
-        options: { data: { full_name, phone, city, role, services: services || [] }, emailRedirectTo: this._redirect() },
+        options: {
+          data: { full_name, phone, city, role, services: services || [], country: country || null,
+            postal_code: postal_code || '', application: application || {} },
+          emailRedirectTo: this._redirect(),
+        },
       }));
       // Supabase renvoie un utilisateur sans identités quand l'email existe déjà
       if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
@@ -1611,7 +1667,9 @@ window.PROOVA_CONFIG = {
 
     async updateProfile(fields) {
       const allowed = {};
-      for (const k of ['full_name', 'phone', 'city', 'services', 'bio', 'available']) if (k in fields) allowed[k] = fields[k];
+      for (const k of ['full_name', 'phone', 'city', 'services', 'bio', 'available', 'country', 'postal_code', 'application']) {
+        if (k in fields) allowed[k] = fields[k];
+      }
       return this._q(this.sb.from('profiles').update(allowed).eq('id', this._uid()).select().single());
     }
 
@@ -2510,17 +2568,19 @@ VIEWS['signup-pro'] = {
       <p class="muted">Créez votre compte, choisissez vos services. L’équipe Proova valide votre profil avant vos premières missions.</p>
       <form data-form="signup" class="form" novalidate>
         <input type="hidden" name="role" value="provider">
-        <div class="grid-2">
+        <fieldset class="group"><legend>Vous</legend>
           ${field('full_name', 'Nom et prénom', { auto: 'name' })}
-          ${field('city', 'Ville', { auto: 'address-level2', placeholder: 'Lausanne' })}
-        </div>
-        ${field('email', 'Email', { type: 'email', auto: 'email', inputmode: 'email' })}
-        ${field('phone', 'Téléphone', { type: 'tel', auto: 'tel', inputmode: 'tel', placeholder: '+41 79 123 45 67' })}
-        <fieldset class="field"><legend>Services proposés</legend>
+          ${field('email', 'Email', { type: 'email', auto: 'email', inputmode: 'email' })}
+          ${field('phone', 'Téléphone', { type: 'tel', auto: 'tel', inputmode: 'tel', placeholder: '+41 79 123 45 67 ou 06 12 34 56 78' })}
+        </fieldset>
+        <fieldset class="group"><legend>Services proposés</legend>
           <div class="check-grid">${Object.entries(P.SERVICES).map(([k, s]) => html`<label class="check-tile">
             <input type="checkbox" name="services" value="${k}" data-group="1">${icon(SERVICE_ICON[k])}<span>${s.label}</span></label>`)}</div>
         </fieldset>
-        ${field('password', 'Mot de passe', { type: 'password', auto: 'new-password', min: 8, hint: '8 caractères minimum' })}
+        ${applicationFields({})}
+        <fieldset class="group"><legend>Votre accès</legend>
+          ${field('password', 'Mot de passe', { type: 'password', auto: 'new-password', min: 8, hint: '8 caractères minimum' })}
+        </fieldset>
         <p class="form-error" role="alert" hidden></p>
         <button class="btn btn-primary btn-block btn-lg" type="submit">Envoyer ma candidature</button>
       </form>
@@ -2535,6 +2595,8 @@ FORMS.signup = async (form, btn) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email || '')) return formError(form, 'Adresse email invalide.');
   if (!f.phone || f.phone.replace(/\D/g, '').length < 8) return formError(form, 'Numéro de téléphone incomplet.');
   if (f.role === 'provider' && !(f.services || []).length) return formError(form, 'Choisissez au moins un service.');
+  const app = f.role === 'provider' ? readApplication(form) : null;
+  if (app && app.error) return formError(form, app.error);
   if ((f.password || '').length < 8) return formError(form, 'Le mot de passe doit faire au moins 8 caractères.');
   formError(form, '');
   setBusy(btn, true, 'Création du compte…');
@@ -2542,7 +2604,8 @@ FORMS.signup = async (form, btn) => {
     S.pendingServices = f.role === 'provider' ? f.services : null;
     const res = await S.api.signUp({
       email: f.email, password: f.password, full_name: f.full_name, phone: f.phone,
-      city: f.city || '', role: f.role, services: f.services || [],
+      city: app ? app.city : (f.city || ''), role: f.role, services: f.services || [],
+      country: app ? app.country : null, postal_code: app ? app.postal_code : '', application: app ? app.application : {},
     });
     if (res.needsConfirmation) {
       $('.auth-card').innerHTML = str(html`<div class="done-state">${icon('send', 'ic-xl')}<h1>Vérifiez votre boîte mail</h1>
@@ -2610,6 +2673,305 @@ FORMS.reset = async (form, btn) => {
     go(homeFor());
   } catch (e) { formError(form, e.message); } finally { if (btn.isConnected) setBusy(btn, false); }
 };
+
+/* ============================================================ candidature prestataire */
+const COUNTRIES = { CH: 'Suisse', FR: 'France' };
+const QUALIFS = {
+  none: 'Pas de diplôme, mais de l’expérience',
+  cap: 'CAP Agent de propreté et d’hygiène (France)',
+  bacpro: 'Bac pro Hygiène, propreté, stérilisation (France)',
+  titrepro: 'Titre pro Agent de propreté et d’hygiène (France)',
+  afp: 'AFP Agent·e de propreté (Suisse)',
+  cfc: 'CFC Agent·e de propreté (Suisse)',
+  detailing: 'Formation en detailing automobile',
+  other: 'Autre formation dans le nettoyage',
+};
+const EXPERIENCE = { lt1: 'Moins d’un an', y1_3: '1 à 3 ans', y3_5: '3 à 5 ans', gt5: 'Plus de 5 ans' };
+const EQUIP_LEVEL = { full: 'Oui, complet', partial: 'En partie', none: 'Pas encore' };
+const EQUIPMENT = {
+  vacuum: 'Aspirateur', steam: 'Nettoyeur vapeur', pressure: 'Nettoyeur haute pression', scrubber: 'Monobrosse',
+  extractor: 'Injecteur-extracteur', products: 'Produits professionnels', carwash: 'Matériel de lavage auto', ladder: 'Perche ou échelle pour vitres',
+};
+const AVAIL = ['', 'Quelques heures par mois', 'Quelques heures par semaine', '2 à 3 jours par semaine', 'Temps plein en semaine', 'Temps plein, week-ends compris'];
+const PREF_SLOTS = { morning: 'Matin', afternoon: 'Après-midi', evening: 'Soir', weekend: 'Week-end' };
+
+// ---------------------------------------------------------------- formulaire
+function applicationFields(p) {
+  const a = (p && p.application) || {};
+  const level = a.equipment_level || '';
+  const avail = Number(a.availability) || 3;
+  const has = (list, k) => (list || []).includes(k);
+  return html`
+    <fieldset class="group"><legend>Où travaillez-vous ?</legend>
+      ${cityField((p && p.country) || 'CH', p && p.city, p && p.postal_code)}
+    </fieldset>
+    <fieldset class="group"><legend>Votre expérience</legend>
+      <label class="field"><span>Qualification dans le nettoyage</span>
+        <select name="qualification" required>
+          <option value="">Choisir…</option>
+          ${Object.entries(QUALIFS).map(([k, l]) => html`<option value="${k}" ${k === a.qualification ? raw('selected') : ''}>${l}</option>`)}
+        </select></label>
+      <label class="field"><span>Années d’expérience</span>
+        <select name="experience" required>
+          <option value="">Choisir…</option>
+          ${Object.entries(EXPERIENCE).map(([k, l]) => html`<option value="${k}" ${k === a.experience ? raw('selected') : ''}>${l}</option>`)}
+        </select></label>
+    </fieldset>
+    <fieldset class="group"><legend>Votre matériel</legend>
+      <div class="field"><span id="eq-l">Avez-vous du matériel opérationnel ?</span>
+        <div class="seg seg-3" role="radiogroup" aria-labelledby="eq-l">
+          ${Object.entries(EQUIP_LEVEL).map(([k, l]) => html`<label class="seg-opt"><input type="radio" name="equipment_level" value="${k}"
+            ${k === level ? raw('checked') : ''} data-change="equip-level"><span>${l}</span></label>`)}
+        </div></div>
+      <div class="field equip-list" ${level === 'none' || !level ? raw('hidden') : ''}><span>Ce que vous avez</span>
+        <div class="check-grid">${Object.entries(EQUIPMENT).map(([k, l]) => html`<label class="check-tile check-sm">
+          <input type="checkbox" name="equipment" value="${k}" data-group="1" ${has(a.equipment, k) ? raw('checked') : ''}><span>${l}</span></label>`)}</div>
+      </div>
+      <label class="check-line"><input type="checkbox" name="vehicle" ${a.vehicle ? raw('checked') : ''}>
+        <span>J’ai un véhicule pour me déplacer avec mon matériel</span></label>
+    </fieldset>
+    <fieldset class="group"><legend>Vos disponibilités</legend>
+      <div class="field">
+        <span class="avail-head"><span id="av-l">Combien êtes-vous disponible ?</span><output class="avail-out">${AVAIL[avail]}</output></span>
+        <input type="range" name="availability" min="1" max="5" step="1" value="${avail}" data-input="avail" aria-labelledby="av-l"
+          aria-valuetext="${AVAIL[avail]}">
+        <span class="avail-scale" aria-hidden="true"><span>Un peu</span><span>À fond</span></span>
+      </div>
+      <div class="field"><span>Moments préférés</span>
+        <div class="chips">${Object.entries(PREF_SLOTS).map(([k, l]) => html`<label class="chip chip-check">
+          <input type="checkbox" name="slots" value="${k}" data-group="1" ${has(a.slots, k) ? raw('checked') : ''}><span>${l}</span></label>`)}</div>
+      </div>
+    </fieldset>
+    <fieldset class="group"><legend>Votre statut</legend>
+      <label class="field"><span>Numéro SIRET (France) ou IDE (Suisse) <em>(facultatif)</em></span>
+        <input name="siret" value="${a.siret || ''}" maxlength="20" inputmode="text" autocomplete="off" placeholder="ex. 123 456 789 00012 ou CHE-123.456.789"></label>
+      <label class="check-line"><input type="checkbox" name="insured" ${a.insured ? raw('checked') : ''}>
+        <span>J’ai une assurance responsabilité civile professionnelle</span></label>
+    </fieldset>`;
+}
+
+// Lit et vérifie la candidature. Renvoie { error } ou { country, city, postal_code, application }.
+function readApplication(form) {
+  const f = formData(form);
+  if (!f.country) return { error: 'Choisissez votre pays.' };
+  if (!f.city) return { error: 'Indiquez votre ville.' };
+  if (f.city_ok !== '1' && !S.cityApiDown) return { error: 'Choisissez votre ville dans la liste proposée.' };
+  if (!f.qualification) return { error: 'Indiquez votre qualification.' };
+  if (!f.experience) return { error: 'Indiquez vos années d’expérience.' };
+  if (!f.equipment_level) return { error: 'Dites-nous si vous avez du matériel.' };
+  const level = f.equipment_level;
+  return {
+    country: f.country,
+    city: f.city.slice(0, 80),
+    postal_code: (f.postal_code || '').slice(0, 12),
+    application: {
+      qualification: f.qualification,
+      experience: f.experience,
+      equipment_level: level,
+      equipment: level === 'none' ? [] : (f.equipment || []).filter((k) => EQUIPMENT[k]),
+      vehicle: !!f.vehicle,
+      availability: Math.min(5, Math.max(1, Number(f.availability) || 3)),
+      slots: (f.slots || []).filter((k) => PREF_SLOTS[k]),
+      siret: (f.siret || '').slice(0, 20),
+      insured: !!f.insured,
+    },
+  };
+}
+
+INPUTS.avail = (el) => {
+  const out = el.closest('.field').querySelector('.avail-out');
+  out.textContent = AVAIL[Number(el.value)];
+  el.setAttribute('aria-valuetext', AVAIL[Number(el.value)]);
+};
+CHANGES['equip-level'] = (el) => {
+  const list = el.closest('fieldset').querySelector('.equip-list');
+  if (list) list.hidden = el.value === 'none';
+};
+
+// Résumé lisible pour l'administration
+function applicationFacts(p) {
+  const a = p.application || {};
+  const place = [p.postal_code, p.city].filter(Boolean).join(' ') + (p.country ? `, ${COUNTRIES[p.country]}` : '');
+  const equip = a.equipment_level
+    ? EQUIP_LEVEL[a.equipment_level] + ((a.equipment || []).length ? ` : ${a.equipment.map((k) => EQUIPMENT[k]).filter(Boolean).join(', ')}` : '')
+    : '—';
+  return [
+    ['Lieu', place.trim() || '—'],
+    ['Qualification', QUALIFS[a.qualification] || '—'],
+    ['Expérience', EXPERIENCE[a.experience] || '—'],
+    ['Matériel', equip],
+    ['Véhicule', a.vehicle ? 'Oui' : a.qualification ? 'Non' : '—'],
+    ['Disponibilité', a.availability ? AVAIL[a.availability] + ((a.slots || []).length ? ` (${a.slots.map((k) => PREF_SLOTS[k].toLowerCase()).join(', ')})` : '') : '—'],
+    ['SIRET ou IDE', a.siret || '—'],
+    ['Assurance RC pro', a.insured ? 'Oui' : a.qualification ? 'Non' : '—'],
+  ];
+}
+
+// ---------------------------------------------------------------- ville vérifiée (annuaire officiel)
+const ACCENTS = { a: 'aàâä', e: 'eéèêë', i: 'iîï', o: 'oôö', u: 'uùûü', c: 'cç', y: 'yÿ', n: 'nñ' };
+function looseRegex(q) {
+  let out = '^';
+  for (const ch of q) {
+    const base = ch.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (/[a-z]/.test(base)) {
+      const set = ACCENTS[base] || base;
+      out += `[${set}${set.toUpperCase()}]`;
+    } else if (/[\s\-']/.test(ch)) out += "[ \\-']";
+    else if (/[0-9]/.test(ch)) out += ch;
+    else out += '.';
+  }
+  return out;
+}
+
+async function citiesFR(q, signal) {
+  const r = await fetch(`https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(q)}&fields=nom,codesPostaux,departement&boost=population&limit=8`, { signal });
+  if (!r.ok) throw new Error('http ' + r.status);
+  const data = await r.json();
+  return data.map((c) => ({ name: c.nom, npa: (c.codesPostaux || [])[0] || '', region: c.departement ? c.departement.code : '' }));
+}
+
+async function citiesCH(q, signal) {
+  const r = await fetch(`https://openplzapi.org/ch/Localities?name=${encodeURIComponent(looseRegex(q))}&page=1&pageSize=50`, { signal });
+  if (!r.ok) throw new Error('http ' + r.status);
+  const data = await r.json();
+  const seen = new Map();
+  for (const l of data) {
+    const name = String(l.name || '').replace(/\s+\d+$/, '');
+    const region = l.canton ? l.canton.shortName : '';
+    const npa = String(l.postalCode || l.postalcode || '');
+    const key = name + '|' + region;
+    if (!seen.has(key) || npa < seen.get(key).npa) seen.set(key, { name, npa, region });
+  }
+  const low = q.toLowerCase();
+  return [...seen.values()]
+    .sort((a, b) => (b.name.toLowerCase() === low) - (a.name.toLowerCase() === low) || a.name.length - b.name.length || a.name.localeCompare(b.name))
+    .slice(0, 8);
+}
+
+function cityField(country, city, npa) {
+  return html`<div class="cityf" data-cityf>
+    <div class="field"><span id="ct-l">Pays</span>
+      <div class="seg seg-2" role="radiogroup" aria-labelledby="ct-l">
+        ${Object.entries(COUNTRIES).map(([k, l]) => html`<label class="seg-opt"><input type="radio" name="country" value="${k}"
+          ${k === country ? raw('checked') : ''} data-change="city-country"><span>${l}</span></label>`)}
+      </div></div>
+    <label class="field"><span>Ville</span>
+      <span class="combo">
+        <input name="city" value="${city || ''}" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list"
+          aria-expanded="false" aria-controls="city-list" data-input="city-search" data-keep="city" placeholder="Commencez à taper le nom" required>
+        <ul class="combo-list" id="city-list" role="listbox" aria-label="Villes" hidden></ul>
+      </span>
+      <small class="city-hint" aria-live="polite">${city ? (npa ? `Ville vérifiée, code postal ${npa}` : 'Ville enregistrée') : 'Choisissez votre ville dans la liste.'}</small>
+    </label>
+    <input type="hidden" name="postal_code" value="${npa || ''}">
+    <input type="hidden" name="city_ok" value="${city ? '1' : ''}">
+  </div>`;
+}
+
+let cityTimer = null;
+let cityReq = 0;
+function cityHint(box, text, tone) {
+  const h = box.querySelector('.city-hint');
+  h.textContent = text;
+  h.className = 'city-hint' + (tone ? ' is-' + tone : '');
+}
+function closeCombo(box) {
+  const list = box.querySelector('.combo-list');
+  list.hidden = true;
+  list.innerHTML = '';
+  const input = box.querySelector('[name=city]');
+  input.setAttribute('aria-expanded', 'false');
+  input.removeAttribute('aria-activedescendant');
+}
+INPUTS['city-search'] = (el) => {
+  const box = el.closest('[data-cityf]');
+  box.querySelector('[name=city_ok]').value = '';
+  box.querySelector('[name=postal_code]').value = '';
+  clearTimeout(cityTimer);
+  const q = el.value.trim();
+  if (q.length < 2) { closeCombo(box); cityHint(box, 'Choisissez votre ville dans la liste.'); return; }
+  cityTimer = setTimeout(() => searchCities(box, q), 250);
+};
+async function searchCities(box, q) {
+  const id = ++cityReq;
+  const country = (box.querySelector('[name=country]:checked') || {}).value || 'CH';
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 6000);
+  cityHint(box, 'Recherche…');
+  try {
+    const list = country === 'FR' ? await citiesFR(q, ctrl.signal) : await citiesCH(q, ctrl.signal);
+    if (id !== cityReq) return;
+    S.cityApiDown = false;
+    renderCombo(box, list);
+  } catch (e) {
+    if (id !== cityReq) return;
+    S.cityApiDown = true;
+    closeCombo(box);
+    cityHint(box, 'Vérification des villes indisponible pour le moment : vérifiez simplement l’orthographe.', 'warn');
+  } finally { clearTimeout(timer); }
+}
+function renderCombo(box, list) {
+  const ul = box.querySelector('.combo-list');
+  const input = box.querySelector('[name=city]');
+  if (!list.length) { closeCombo(box); cityHint(box, 'Aucune ville trouvée. Vérifiez l’orthographe ou le pays.', 'warn'); return; }
+  ul.innerHTML = str(html`${list.map((c, i) => html`<li role="option" id="city-opt-${i}" aria-selected="false" data-act="city-pick"
+    data-name="${c.name}" data-npa="${c.npa}">${c.name}<small>${c.region ? `${c.region}, ` : ''}${c.npa}</small></li>`)}`);
+  ul.hidden = false;
+  input.setAttribute('aria-expanded', 'true');
+  cityHint(box, `${list.length} ville${list.length > 1 ? 's' : ''} trouvée${list.length > 1 ? 's' : ''} : touchez la vôtre.`);
+}
+function pickCity(li) {
+  const box = li.closest('[data-cityf]');
+  box.querySelector('[name=city]').value = li.dataset.name;
+  box.querySelector('[name=postal_code]').value = li.dataset.npa;
+  box.querySelector('[name=city_ok]').value = '1';
+  closeCombo(box);
+  cityHint(box, `Ville vérifiée, code postal ${li.dataset.npa}`, 'ok');
+  const err = box.closest('form') && box.closest('form').querySelector('.form-error');
+  if (err && /ville/i.test(err.textContent)) { err.textContent = ''; err.hidden = true; }
+}
+ACTIONS['city-pick'] = (li) => pickCity(li);
+// Revenir dans la case rouvre les suggestions tant que la ville n'est pas choisie
+document.addEventListener('focusin', (e) => {
+  const input = e.target.closest && e.target.closest('[data-input="city-search"]');
+  if (!input) return;
+  const box = input.closest('[data-cityf]');
+  if (box.querySelector('[name=city_ok]').value !== '1' && input.value.trim().length >= 2) searchCities(box, input.value.trim());
+});
+CHANGES['city-country'] = (el) => {
+  const box = el.closest('[data-cityf]');
+  const input = box.querySelector('[name=city]');
+  input.value = '';
+  box.querySelector('[name=city_ok]').value = '';
+  box.querySelector('[name=postal_code]').value = '';
+  closeCombo(box);
+  cityHint(box, 'Choisissez votre ville dans la liste.');
+  input.focus();
+};
+document.addEventListener('keydown', (e) => {
+  const input = e.target.closest && e.target.closest('[data-input="city-search"]');
+  if (!input) return;
+  const box = input.closest('[data-cityf]');
+  const opts = $$('[role=option]', box);
+  if (!opts.length || box.querySelector('.combo-list').hidden) return;
+  let i = opts.findIndex((o) => o.getAttribute('aria-selected') === 'true');
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    i = e.key === 'ArrowDown' ? Math.min(opts.length - 1, i + 1) : Math.max(0, i - 1);
+    opts.forEach((o, j) => o.setAttribute('aria-selected', String(j === i)));
+    input.setAttribute('aria-activedescendant', opts[i].id);
+    opts[i].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    pickCity(opts[Math.max(0, i)]);
+  } else if (e.key === 'Escape') {
+    e.stopPropagation();
+    closeCombo(box);
+  }
+}, true);
+document.addEventListener('click', (e) => {
+  $$('[data-cityf]').forEach((box) => { if (!box.contains(e.target)) closeCombo(box); });
+});
 
 /* ============================================================ réservation en 5 étapes */
 const BOOK_STEPS = ['Service', 'Détails', 'Date', 'Adresse', 'Confirmation'];
@@ -3474,7 +3836,7 @@ VIEWS.admin = {
           <div class="panel-head"><h2 class="panel-title">Prestataires à valider</h2><span class="count">${toValidate.length}</span></div>
           ${toValidate.length ? html`<div class="mini-list">${toValidate.map((p) => html`<div class="mini">
               <span class="avatar">${initials(p.full_name)}</span>
-              <span class="mini-main"><strong>${p.full_name}</strong><small>${p.city || 'Ville ?'}, ${(p.services || []).map((s) => P.SERVICES[s].short).join(', ') || 'aucun service'}</small></span>
+              <a class="mini-main" href="#admin-equipe"><strong>${p.full_name}</strong><small>${p.city || 'Ville ?'}${p.country ? ` (${p.country})` : ''}, ${(p.services || []).map((s) => P.SERVICES[s].short).join(', ') || 'aucun service'}${p.application && p.application.experience ? `, ${EXPERIENCE[p.application.experience].toLowerCase()}` : ''}</small></a>
               <button class="btn btn-sm btn-primary" data-act="adm-provider" data-u="${p.id}" data-v="approved">Valider</button></div>`)}</div>`
             : html`<p class="muted">Aucune candidature en attente.</p>`}
         </section>
@@ -3577,10 +3939,11 @@ VIEWS['admin-team'] = {
             ${html`<span class="pill pill-${{ approved: 'ok', pending: 'wait', suspended: 'off' }[p.provider_status]}">${{ approved: 'Validé', pending: 'À valider', suspended: 'Suspendu' }[p.provider_status]}</span>`}</div>
           <dl class="pcard-facts">
             <div><dt>Services</dt><dd>${(p.services || []).map((s) => P.SERVICES[s].short).join(', ') || '—'}</dd></div>
-            <div><dt>Ville</dt><dd>${p.city || '—'}</dd></div>
-            <div><dt>Missions</dt><dd>${count(p.id, 'provider_id')}</dd></div>
-            <div><dt>Note</dt><dd>${Number(p.rating_count) ? `${Number(p.rating_avg).toFixed(1).replace('.', ',')} (${p.rating_count})` : '—'}</dd></div>
+            <div><dt>Missions</dt><dd>${count(p.id, 'provider_id')}${Number(p.rating_count) ? `, note ${Number(p.rating_avg).toFixed(1).replace('.', ',')} (${p.rating_count})` : ''}</dd></div>
           </dl>
+          <details class="pcard-more" ${p.provider_status === 'pending' ? raw('open') : ''}><summary>Candidature</summary>
+            <dl class="app-facts">${applicationFacts(p).map(([k, v]) => html`<div><dt>${k}</dt><dd>${v}</dd></div>`)}</dl>
+          </details>
           ${p.bio ? html`<p class="pcard-bio">${p.bio}</p>` : ''}
           <div class="pcard-actions">
             ${p.phone ? html`<a class="btn btn-sm btn-ghost" href="${telHref(p.phone)}">${icon('phone')}${p.phone}</a>` : ''}
@@ -3676,16 +4039,17 @@ VIEWS.profile = {
           <form data-form="profile" class="panel form">
             <h2 class="panel-title">Coordonnées</h2>
             ${field('full_name', 'Nom et prénom', { value: p.full_name, auto: 'name' })}
-            <div class="grid-2">
+            ${isPro ? field('phone', 'Téléphone', { type: 'tel', value: p.phone, auto: 'tel', inputmode: 'tel' }) : html`<div class="grid-2">
               ${field('phone', 'Téléphone', { type: 'tel', value: p.phone, auto: 'tel', inputmode: 'tel' })}
               ${field('city', 'Ville', { value: p.city, auto: 'address-level2', required: false })}
-            </div>
+            </div>`}
             ${isPro ? html`<fieldset class="field"><legend>Services proposés</legend>
                 <div class="check-grid">${Object.entries(P.SERVICES).map(([k, s]) => html`<label class="check-tile">
                   <input type="checkbox" name="services" value="${k}" data-group="1" ${(p.services || []).includes(k) ? raw('checked') : ''}>${icon(SERVICE_ICON[k])}<span>${s.label}</span></label>`)}</div>
               </fieldset>
               <label class="field"><span>Présentation <em>(visible par l’équipe)</em></span>
-                <textarea name="bio" rows="3" maxlength="500" placeholder="Expérience, matériel, zones où vous vous déplacez…">${p.bio || ''}</textarea></label>` : ''}
+                <textarea name="bio" rows="3" maxlength="500" placeholder="Expérience, matériel, zones où vous vous déplacez…">${p.bio || ''}</textarea></label>
+              ${applicationFields(p)}` : ''}
             <button class="btn btn-primary" type="submit">Enregistrer</button>
           </form>
         </div>
@@ -3720,7 +4084,12 @@ FORMS.profile = async (form, btn) => {
   const f = formData(form);
   if (!f.full_name) { toast('Indiquez votre nom', 'bad'); return; }
   const fields = { full_name: f.full_name, phone: f.phone, city: f.city };
-  if (role() === 'provider') { fields.services = f.services || []; fields.bio = f.bio || ''; }
+  if (role() === 'provider') {
+    const app = readApplication(form);
+    if (app.error) { toast(app.error, 'bad'); return; }
+    Object.assign(fields, { services: f.services || [], bio: f.bio || '', city: app.city, country: app.country,
+      postal_code: app.postal_code, application: app.application });
+  }
   S.profile = await run(btn, () => S.api.updateProfile(fields), 'Profil enregistré');
   refresh();
 };
@@ -3743,15 +4112,20 @@ ACTIONS['become-pro'] = () => openSheet(html`<h2 id="sheet-title">Devenir presta
     <fieldset class="field"><legend>Services proposés</legend>
       <div class="check-grid">${Object.entries(P.SERVICES).map(([k, s]) => html`<label class="check-tile">
         <input type="checkbox" name="services" value="${k}" data-group="1">${icon(SERVICE_ICON[k])}<span>${s.label}</span></label>`)}</div></fieldset>
-    ${field('city', 'Ville', { value: (S.profile && S.profile.city) || '' })}
     <label class="field"><span>Présentation <em>(facultatif)</em></span><textarea name="bio" rows="3" maxlength="500"></textarea></label>
+    ${applicationFields({})}
     <div class="sheet-actions"><button type="button" class="btn btn-ghost" data-act="close-sheet">Plus tard</button>
       <button type="submit" class="btn btn-primary">Envoyer ma candidature</button></div>
   </form>`);
 FORMS['become-pro'] = async (form, btn) => {
   const f = formData(form);
   if (!(f.services || []).length) { toast('Choisissez au moins un service', 'bad'); return; }
-  S.profile = await run(btn, () => S.api.becomeProvider(f.services, f.bio, f.city), 'Candidature envoyée');
+  const app = readApplication(form);
+  if (app.error) { toast(app.error, 'bad'); return; }
+  S.profile = await run(btn, async () => {
+    await S.api.becomeProvider(f.services, f.bio, app.city);
+    return S.api.updateProfile({ city: app.city, country: app.country, postal_code: app.postal_code, application: app.application });
+  }, 'Candidature envoyée');
   closeSheet();
   go('missions');
 };
