@@ -686,6 +686,28 @@ a.mini-main:hover strong { text-decoration: underline; text-underline-offset: 3p
 .app-facts dt { color: var(--muted); }
 .app-facts dd { margin: 0; font-weight: 500; }
 
+/* ---------------------------------------------------------------- photos */
+.people-band { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 56px; align-items: center; }
+.people-copy h2 { font-size: clamp(28px, 3.6vw, 40px); font-weight: 800; letter-spacing: -0.035em; max-width: 18ch; }
+.people-copy p { margin-top: 16px; font-size: 18px; color: var(--ink-2); max-width: 46ch; }
+.people-points { list-style: none; padding: 0; margin: 24px 0 0; display: grid; gap: 16px; max-width: 48ch; }
+.people-points li { display: flex; gap: 12px; color: var(--ink-2); }
+.people-points .ic { color: var(--ink); margin-top: 3px; }
+.people-points strong { color: var(--ink); }
+.photo-grid { display: grid; grid-template-columns: 1.25fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px; height: 480px; }
+.photo { margin: 0; overflow: hidden; border-radius: var(--r-lg); background: var(--mist); }
+.photo-main { grid-row: 1 / span 2; }
+.photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-grid-2 { grid-template-rows: 1fr; }
+.photo-grid-2 .photo-main { grid-row: auto; }
+.photo-grid-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.preview-note { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; max-width: 560px; margin: 0 auto 12px; padding: 12px 14px;
+  border-radius: 12px; background: var(--info-soft); color: var(--info); font-size: 14px; font-weight: 500; }
+.preview-note span { flex: 1; min-width: 200px; }
+.auth-main { flex-direction: column; align-items: center; }
+.auth-main > .auth-card { align-self: center; }
+.preview-note { width: 100%; }
+
 /* ---------------------------------------------------------------- chargement */
 .skeleton { display: grid; gap: 14px; }
 .sk { background: linear-gradient(90deg, var(--mist), #f4f7fa, var(--mist)); background-size: 200% 100%; border-radius: 12px; animation: sk 1.2s infinite linear; }
@@ -739,6 +761,9 @@ a.mini-main:hover strong { text-decoration: underline; text-underline-offset: 3p
   .lead { font-size: 17px; margin-top: 16px; }
   .band { padding: 44px 16px; }
   .step-list { grid-template-columns: 1fr; gap: 20px; }
+  .people-band { grid-template-columns: 1fr; gap: 28px; }
+  .photo-grid { height: 380px; grid-template-columns: 1.2fr 1fr; }
+  .people-copy p { font-size: 17px; }
   .svc { grid-template-columns: auto 1fr auto; gap: 12px 14px; }
   .svc .btn { grid-column: 2 / -1; justify-self: start; }
   .lease { flex-direction: column; align-items: flex-start; margin: 8px 16px; padding: 28px 22px; }
@@ -2061,8 +2086,9 @@ async function navigate() {
     S.afterLogin = location.hash;
     return go('connexion', true);
   }
-  if (S.session && ['login', 'signup'].includes(r.name)) return go(S.afterLogin || homeFor(), true);
-  if (S.session && r.name === 'signup-pro') { S.openBecomePro = true; return go('profil', true); }
+  const adminPreview = S.session && role() === 'admin' && ['signup', 'signup-pro'].includes(r.name);
+  if (S.session && !adminPreview && ['login', 'signup'].includes(r.name)) return go(S.afterLogin || homeFor(), true);
+  if (S.session && !adminPreview && r.name === 'signup-pro') { S.openBecomePro = true; return go('profil', true); }
   if (ROLE_ONLY[r.name] && role() !== ROLE_ONLY[r.name]) return go(homeFor(), true);
 
   S.route = r;
@@ -2406,6 +2432,8 @@ VIEWS.home = {
         </ol>
       </section>
 
+      ${peopleBand()}
+
       <section class="band" id="services" aria-labelledby="services-t">
         <h2 id="services-t">Ce que nos pros nettoient</h2>
         <div class="svc-list">
@@ -2542,7 +2570,7 @@ VIEWS.signup = {
   title: () => 'Créer un compte',
   render() {
     const pending = S.booking && S.booking.step >= 4;
-    return html`<div class="auth-card">
+    return html`${previewNote()}<div class="auth-card">
       <h1>Créer un compte</h1>
       <p class="muted">${pending ? 'Dernière étape avant de confirmer votre réservation.' : 'Pour réserver et suivre vos prestations.'}</p>
       <form data-form="signup" class="form" novalidate>
@@ -2564,7 +2592,7 @@ VIEWS['signup-pro'] = {
   layout: 'auth',
   title: () => 'Devenir prestataire',
   render() {
-    return html`<div class="auth-card auth-wide">
+    return html`${previewNote()}<div class="auth-card auth-wide">
       <h1>Devenir prestataire</h1>
       <p class="muted">Créez votre compte, choisissez vos services. L’équipe Proova valide votre profil avant vos premières missions.</p>
       <form data-form="signup" class="form" novalidate>
@@ -2590,7 +2618,14 @@ VIEWS['signup-pro'] = {
   },
 };
 
+function previewNote() {
+  if (!S.session || role() !== 'admin') return '';
+  return html`<p class="preview-note">${icon('shield')}<span>Aperçu : c\u2019est exactement ce que voient les candidats.
+    Vous êtes connecté en admin, donc l\u2019envoi est désactivé ici.</span> <a class="link" href="#admin">Retour à l\u2019admin</a></p>`;
+}
+
 FORMS.signup = async (form, btn) => {
+  if (S.session) { formError(form, 'Aperçu seulement : déconnectez-vous ou ouvrez un onglet privé pour tester une inscription.'); return; }
   const f = formData(form);
   if (!f.full_name || f.full_name.length < 2) return formError(form, 'Indiquez votre nom.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email || '')) return formError(form, 'Adresse email invalide.');
@@ -2674,6 +2709,39 @@ FORMS.reset = async (form, btn) => {
     go(homeFor());
   } catch (e) { formError(form, e.message); } finally { if (btn.isConnected) setBusy(btn, false); }
 };
+
+// ---------------------------------------------------------------- photos (Unsplash, licence libre d'utilisation)
+const PHOTOS = [
+  { id: 'photo-1758686254555-9bcaba0dd46d', alt: 'Un couple de retraités danse en riant dans leur salon' },
+  { id: 'photo-1758691031402-5cfbeebc6162', alt: 'Un couple âgé souriant, enlacé sur leur canapé' },
+  { id: 'photo-1758686253896-e6c76b6f7aa1', alt: 'Une femme âgée souriante, chez elle, lève le pouce' },
+];
+const photoUrl = (id, w) => `https://images.unsplash.com/${id}?auto=format&fit=crop&crop=faces&w=${w}&q=70`;
+function peopleBand() {
+  return html`<section class="band people-band" aria-labelledby="people-t">
+    <div class="people-copy">
+      <h2 id="people-t">Un intérieur net, du temps pour le reste</h2>
+      <p>Pour nos aînés qui ne veulent plus porter l’aspirateur, pour les familles qui manquent de soirées,
+        pour tous ceux qui préfèrent profiter de chez eux plutôt que d’y faire le ménage.</p>
+      <ul class="people-points">
+        <li>${icon('users')}<span><strong>Vous pouvez réserver pour vos parents.</strong> Indiquez leur adresse et leur téléphone, vous suivez tout depuis le vôtre.</span></li>
+        <li>${icon('shield')}<span><strong>Le même niveau d’exigence à chaque passage.</strong> Chaque mission est notée, les pros sont validés un par un.</span></li>
+      </ul>
+    </div>
+    <div class="photo-grid">
+      ${PHOTOS.map((p, i) => html`<figure class="photo ${i === 0 ? 'photo-main' : ''}">
+        <img src="${photoUrl(p.id, i === 0 ? 900 : 600)}" srcset="${photoUrl(p.id, i === 0 ? 600 : 400)} 600w, ${photoUrl(p.id, i === 0 ? 1200 : 800)} 1200w"
+          sizes="(max-width: 860px) ${i === 0 ? '92vw' : '46vw'}, ${i === 0 ? '420px' : '300px'}" alt="${p.alt}" loading="lazy" decoding="async"></figure>`)}
+    </div>
+  </section>`;
+}
+// Si une photo ne charge pas, on la retire proprement (et la grille si aucune ne charge)
+document.addEventListener('error', (e) => {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement) || !img.closest('.photo')) return;
+  img.closest('.photo').remove();
+  $$('.photo-grid').forEach((g) => { if (!g.querySelector('.photo')) g.remove(); else g.classList.add('photo-grid-' + g.querySelectorAll('.photo').length); });
+}, true);
 
 /* ============================================================ candidature prestataire */
 const COUNTRIES = { CH: 'Suisse', FR: 'France' };
