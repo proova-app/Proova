@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f2f5f8">
-<meta name="description" content="Proova : réservez un ménage, un nettoyage de bureaux, de voiture ou d'extérieur au prix affiché. Prestataires vérifiés, paiement après la prestation.">
-<title>Proova | Ménage et nettoyage au prix affiché</title>
+<meta name="description" content="Proova : réservez le nettoyage de votre voiture ou de votre maison au prix affiché. Prestataires vérifiés, paiement après la prestation.">
+<title>Proova | Nettoyage voiture et maison au prix affiché</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap">
@@ -20,9 +20,10 @@
   --surface: #ffffff;
   --mist: #e7edf3;
   --line: #d4dee7;
-  --glove: #ffc933;
-  --glove-2: #f2b705;
-  --glove-soft: #fff4d1;
+  --glove: #e03131;
+  --glove-2: #b42323;
+  --glove-soft: #fdecec;
+  --star: #f2b705;
   --lake: #2e64a8;
   --ok: #137a50;   --ok-soft: #e1f3ea;
   --wait: #8a5800; --wait-soft: #fff0d3;
@@ -76,7 +77,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .btn:hover { border-color: var(--ink-2); }
 .btn:active { transform: translateY(1px); }
 .btn .ic { width: 18px; height: 18px; }
-.btn-primary { background: var(--glove); border-color: var(--glove); color: var(--ink); }
+.btn-primary { background: var(--glove); border-color: var(--glove); color: #fff; }
 .btn-primary:hover { background: var(--glove-2); border-color: var(--glove-2); }
 .btn-ghost { background: transparent; border-color: transparent; }
 .btn-ghost:hover { background: var(--mist); border-color: var(--mist); }
@@ -107,7 +108,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .pill-live { background: var(--live-soft); color: var(--live); }
 .pill-ok { background: var(--ok-soft); color: var(--ok); }
 .pill-off { background: var(--off-soft); color: var(--off); }
-.pill-rate { background: var(--glove-soft); color: var(--wait); }
+.pill-rate { background: var(--glove-soft); color: var(--glove-2); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chips-scroll { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
 .chips-scroll::-webkit-scrollbar { display: none; }
@@ -132,7 +133,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .ticket-perf { display: none; }
 .ticket-stub {
-  border-radius: 0 0 var(--r-lg) var(--r-lg); padding: 20px 22px 22px; background-color: var(--glove); color: var(--ink);
+  border-radius: 0 0 var(--r-lg) var(--r-lg); padding: 20px 22px 22px; background-color: var(--glove); color: #fff;
   position: relative;
   -webkit-mask: radial-gradient(circle var(--r) at 0 0, #0000 calc(var(--r) - .5px), #000 var(--r)) left / 51% 100% no-repeat,
     radial-gradient(circle var(--r) at 100% 0, #0000 calc(var(--r) - .5px), #000 var(--r)) right / 51% 100% no-repeat;
@@ -141,8 +142,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
   display: flex; flex-direction: column; gap: 2px;
 }
 .ticket-stub::before {
-  content: ''; position: absolute; top: 0; left: 18px; right: 18px; height: 0; border-top: 2px dashed rgba(15, 39, 65, .28);
+  content: ''; position: absolute; top: 0; left: 18px; right: 18px; height: 0; border-top: 2px dashed rgba(255, 255, 255, .5);
 }
+.ticket-stub .stub-label, .ticket-stub .stub-sub { color: rgba(255, 255, 255, .9); }
 .ticket-stub .price { font-size: 40px; font-weight: 800; line-height: 1.05; }
 .ticket-stub .btn-primary { background: var(--ink); border-color: var(--ink); color: #fff; }
 .ticket-stub .btn-primary:hover { background: var(--ink-2); border-color: var(--ink-2); }
@@ -156,7 +158,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 12px; padding: 7px 16px;
   background: var(--ink); color: #dfe8f1; font-size: 13px; text-align: center;
 }
-.demo-bar .link { color: var(--glove); font-size: 13px; }
+.demo-bar .link { color: #ff9b9b; font-size: 13px; }
 .site-top {
   display: flex; align-items: center; gap: 24px; max-width: 1200px; margin: 0 auto; padding: 18px 24px;
 }
@@ -176,7 +178,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .hero-points .ic { color: var(--ok); margin-top: 2px; }
 
 .quote .ticket-body { display: grid; gap: 18px; }
-.seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; background: var(--mist); border-radius: 14px; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; background: var(--mist); border-radius: 14px; }
 .seg-item {
   display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border: 0; border-radius: 10px;
   background: transparent; color: var(--ink-2); font-size: 13px; font-weight: 600; cursor: pointer;
@@ -189,6 +191,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .q-desc { font-size: 14px; color: var(--muted); }
 .quote .ticket-stub { flex-direction: row; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; }
 .stub-price { display: flex; flex-direction: column; gap: 2px; }
+.was { color: var(--muted); font-weight: 600; text-decoration-thickness: 2px; font-variant-numeric: tabular-nums; }
+.ticket-stub .was { color: rgba(255, 255, 255, .8); }
+.was-line { font-size: 16px; line-height: 1.2; }
+.was-line:empty { display: none; }
+.promo-pill { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 14px; padding: 6px 14px; border-radius: 999px;
+  background: var(--glove); color: #fff; font-weight: 700; font-size: 14px; }
+.promo-pill .ic { width: 16px; height: 16px; }
 
 input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 32px; background: transparent; cursor: pointer; }
 input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 99px; background: var(--mist); }
@@ -324,7 +333,7 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .main-plain { margin: 0 auto; padding: 8px 24px 64px; max-width: 1180px; }
 .avatar {
   display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--glove);
-  color: var(--ink); font-weight: 700; font-size: 14px; flex: none; text-decoration: none; letter-spacing: 0;
+  color: #fff; font-weight: 700; font-size: 14px; flex: none; text-decoration: none; letter-spacing: 0;
 }
 .avatar-lg { width: 52px; height: 52px; font-size: 18px; }
 
@@ -479,7 +488,7 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .tl-dot { position: relative; z-index: 1; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface); display: grid; place-items: center; }
 .tl-dot .ic { width: 15px; height: 15px; stroke-width: 2.6; }
 .timeline li.is-done .tl-dot { background: var(--ink); border-color: var(--ink); color: #fff; }
-.timeline li.is-on .tl-dot { background: var(--glove); border-color: var(--ink); color: var(--ink); }
+.timeline li.is-on .tl-dot { background: var(--glove); border-color: var(--glove-2); color: #fff; }
 .tl-txt { display: grid; line-height: 1.3; }
 .tl-txt strong { font-size: 14px; }
 .tl-txt small { font-size: 12px; color: var(--muted); }
@@ -503,8 +512,8 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .panel > .person:only-child, .stack .panel > .person { margin-bottom: 0; }
 .stars { display: inline-flex; gap: 1px; }
 .star { fill: var(--line); }
-.star-full { fill: var(--glove-2); }
-.star-half { fill: var(--glove-2); opacity: .55; }
+.star-full { fill: var(--star); }
+.star-half { fill: var(--star); opacity: .55; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .actions-col { flex-direction: column; }
 .money { margin: 0 0 16px; display: grid; }
@@ -519,7 +528,7 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .rate-stars label { cursor: pointer; padding: 2px; border-radius: 8px; }
 .rate-stars svg { width: 38px; height: 38px; fill: var(--line); transition: fill .1s, transform .1s; }
 .rate-stars label:hover svg, .rate-stars label:hover ~ label svg,
-.rate-stars input:checked ~ label svg { fill: var(--glove-2); }
+.rate-stars input:checked ~ label svg { fill: var(--star); }
 .rate-stars input:focus-visible + label { outline: 3px solid var(--lake); }
 .chat .panel-title .ic { color: var(--muted); }
 .thread { display: flex; flex-direction: column; gap: 10px; max-height: 360px; overflow-y: auto; padding: 4px 2px 12px; }
@@ -579,7 +588,9 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .offer-facts div { display: flex; align-items: center; gap: 10px; }
 .offer-facts .ic { color: var(--muted); width: 18px; height: 18px; }
 .offer-facts dd { margin: 0; font-weight: 600; }
-.offer-stub { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; background-color: var(--glove-soft); }
+.offer-stub { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; background-color: var(--glove-soft); color: var(--ink); }
+.offer-stub .stub-label, .offer-stub .stub-sub { color: var(--ink-2); }
+.offer-stub::before { border-top-color: rgba(15, 39, 65, .28); }
 .offer-stub .price { font-size: 28px; display: block; }
 .offer-stub .btn-primary { background: var(--ink); border-color: var(--ink); color: #fff; }
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
@@ -587,8 +598,8 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .stat span { font-size: 14px; font-weight: 600; color: var(--ink-2); }
 .stat strong { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1.15; }
 .stat small { color: var(--muted); font-size: 13px; }
-.stat-accent { background: var(--glove); }
-.stat-accent span, .stat-accent small { color: var(--ink-2); }
+.stat-accent { background: var(--glove); color: #fff; }
+.stat-accent span, .stat-accent small { color: rgba(255, 255, 255, .9); }
 
 /* ---------------------------------------------------------------- graphique */
 .chart { position: relative; }
@@ -1917,6 +1928,29 @@ const ICONS = {
 };
 const icon = (name, cls) => raw(`<svg class="ic ${cls || ''}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ''}</svg>`);
 const SERVICE_ICON = { home: 'home', office: 'office', car: 'car', outdoor: 'outdoor' };
+// Services proposés aux clients, dans l'ordre d'affichage. Bureaux et extérieur reviendront plus tard.
+const ACTIVE_SERVICES = ['car', 'home'];
+const liveServices = (keep) => Object.entries(P.SERVICES)
+  .filter(([k]) => ACTIVE_SERVICES.includes(k) || (keep || []).includes(k))
+  .sort(([a], [b]) => (ACTIVE_SERVICES.indexOf(a) + 99) % 99 - (ACTIVE_SERVICES.indexOf(b) + 99) % 99);
+
+// ---------------------------------------------------------------- promo de la semaine
+// S'affiche quand le tarif horaire (Réglages admin) est à 36,45 = 40,50 - 10 %, jusqu'à la date de fin.
+const PROMO = { label: 'Promo de la semaine', pct: 10, regularRate: 40.5, from: '2026-11-06T00:00:00', until: '2026-11-13T23:59:59', untilLabel: '13 novembre' };
+function promoOn() {
+  const now = Date.now();
+  if (now < new Date(PROMO.from).getTime() || now > new Date(PROMO.until).getTime()) return false;
+  const rate = Number(S.settings && S.settings.hourly_rate);
+  return Math.abs(rate - PROMO.regularRate * (1 - PROMO.pct / 100)) < 0.1;
+}
+// Prix habituel (hors promo) d'un devis, ou null si pas de promo en cours
+function regularPrice(service, formula, details, scheduledAt) {
+  if (!promoOn()) return null;
+  const was = P.quote(service, formula, details, scheduledAt, Object.assign({}, S.settings, { hourly_rate: PROMO.regularRate })).price;
+  const now = P.quote(service, formula, details, scheduledAt, S.settings).price;
+  return was > now ? was : null;
+}
+const wasTag = (was) => (was ? html`<s class="was">${fmtMoney(was)}</s>` : '');
 
 function stars(n, size) {
   const r = Math.round(Number(n) * 2) / 2;
@@ -2255,12 +2289,15 @@ document.addEventListener('keydown', (e) => {
 /* ============================================================ site public & connexion */
 function newBooking() {
   return {
-    step: 0, service: 'home', formula: 'regular', surface: 70, size: 'city', options: [],
+    step: 0, service: 'car', formula: 'exterior', surface: 70, size: 'city', options: [], car_model: '',
     day: null, time: null, address: '', postal_code: '', city: '', contact_name: '', contact_phone: '', notes: '',
   };
 }
 function ensureBooking() {
-  if (!S.booking) S.booking = loadDraft() || newBooking();
+  if (!S.booking) {
+    const draft = loadDraft();
+    S.booking = draft && ACTIVE_SERVICES.includes(draft.service) ? Object.assign(newBooking(), draft) : newBooking();
+  }
   return S.booking;
 }
 function setService(b, service) {
@@ -2292,6 +2329,14 @@ function fromPrice(service) {
   return Math.min(...Object.keys(def.formulas).map((f) =>
     P.quote(service, f, def.unit === 'surface' ? { surface: def.min } : { size: 'city' }, null, S.settings).price));
 }
+function fromRegular(service) {
+  if (!promoOn()) return null;
+  const def = P.SERVICES[service];
+  const was = Math.min(...Object.keys(def.formulas).map((f) =>
+    regularPrice(service, f, def.unit === 'surface' ? { surface: def.min } : { size: 'city' }, null) || 0).filter(Boolean));
+  return isFinite(was) && was > fromPrice(service) ? was : null;
+}
+const bookingRegular = (b, withDate) => regularPrice(b.service, b.formula, detailsOf(b), withDate ? scheduledIso(b) : null);
 
 // ---------------------------------------------------------------- le ticket de devis (accueil)
 function quoteTicket() {
@@ -2302,7 +2347,7 @@ function quoteTicket() {
   return html`<div class="ticket quote" id="quote">
     <div class="ticket-body">
       <div class="seg" role="radiogroup" aria-label="Service">
-        ${Object.entries(P.SERVICES).map(([k, s]) => html`<button type="button" role="radio" aria-checked="${String(k === b.service)}"
+        ${liveServices().map(([k, s]) => html`<button type="button" role="radio" aria-checked="${String(k === b.service)}"
           class="seg-item ${k === b.service ? 'is-on' : ''}" data-act="q-service" data-v="${k}">${icon(SERVICE_ICON[k])}<span>${s.short}</span></button>`)}
       </div>
       <div class="q-row">
@@ -2334,7 +2379,8 @@ function quoteTicket() {
     <div class="ticket-perf" aria-hidden="true"></div>
     <div class="ticket-stub">
       <div class="stub-price">
-        <span class="stub-label">Prix fixe, tout compris</span>
+        <span class="stub-label">${promoOn() ? `${PROMO.label}, tout compris` : 'Prix fixe, tout compris'}</span>
+        <span class="was-line" id="q-was">${wasTag(bookingRegular(b, false))}</span>
         <strong class="price" id="q-price">${fmtMoney(q.price)}</strong>
         <span class="stub-sub" id="q-hours">Environ ${fmtHours(q.hours)} de travail, produits inclus</span>
       </div>
@@ -2361,6 +2407,7 @@ INPUTS['q-surface'] = (el) => {
   const q = bookingQuote(b, false);
   $('#q-surface-out').textContent = `${b.surface} m²`;
   $('#q-price').textContent = fmtMoney(q.price);
+  $('#q-was').innerHTML = str(wasTag(bookingRegular(b, false)));
   $('#q-hours').textContent = `Environ ${fmtHours(q.hours)} de travail, produits inclus`;
   saveDraft();
 };
@@ -2383,7 +2430,7 @@ ACTIONS['q-pick'] = (el) => {
 // ---------------------------------------------------------------- page d'accueil
 VIEWS.home = {
   layout: 'public',
-  title: () => 'Ménage et nettoyage au prix affiché',
+  title: () => 'Nettoyage voiture et maison au prix affiché',
   render() {
     const s = S.settings;
     const share = Math.round((1 - Number(s.commission_rate)) * 100);
@@ -2405,9 +2452,10 @@ VIEWS.home = {
     <main id="main">
       <section class="hero">
         <div class="hero-copy">
-          <h1>Un ménage impeccable, au prix affiché.</h1>
-          <p class="lead">Maison, bureaux, voiture ou extérieur. Vous voyez le prix exact avant de réserver,
-            un pro vérifié s’en occupe, et vous ne payez qu’une fois le travail fait.</p>
+          ${promoOn() ? html`<p class="promo-pill">${icon('star')}${PROMO.label} : −${PROMO.pct} % sur tout, jusqu’au ${PROMO.untilLabel}</p>` : ''}
+          <h1>Votre voiture et votre maison impeccables, au prix affiché.</h1>
+          <p class="lead">Vous voyez le prix exact avant de réserver, un pro vérifié vient chez vous,
+            et vous ne payez qu’une fois le travail fait.</p>
           <ul class="hero-points">
             <li>${icon('check')}Prix fixe calculé en direct, sans devis à attendre</li>
             <li>${icon('shield')}Prestataires validés un par un, puis notés après chaque mission</li>
@@ -2416,6 +2464,8 @@ VIEWS.home = {
         </div>
         ${quoteTicket()}
       </section>
+
+      ${peopleBand()}
 
       <section class="band steps" aria-labelledby="how">
         <h2 id="how">Trois étapes, aucune négociation</h2>
@@ -2429,16 +2479,15 @@ VIEWS.home = {
         </ol>
       </section>
 
-      ${peopleBand()}
-
       <section class="band" id="services" aria-labelledby="services-t">
         <h2 id="services-t">Ce que nos pros nettoient</h2>
+        ${promoOn() ? html`<p class="muted">${PROMO.label} : prix barrés valables jusqu’au ${PROMO.untilLabel}.</p>` : ''}
         <div class="svc-list">
-          ${Object.entries(P.SERVICES).map(([k, def]) => html`<article class="svc">
+          ${liveServices().map(([k, def]) => html`<article class="svc">
             <span class="svc-ic">${icon(SERVICE_ICON[k])}</span>
             <div class="svc-txt"><h3>${def.label}</h3>
               <p>${Object.values(def.formulas).map((f) => f.label).join(', ')}</p></div>
-            <div class="svc-price"><small>dès</small><strong>${fmtMoney(fromPrice(k))}</strong></div>
+            <div class="svc-price"><small>dès ${wasTag(fromRegular(k))}</small><strong>${fmtMoney(fromPrice(k))}</strong></div>
             <button type="button" class="btn btn-sm" data-act="q-pick" data-v="${k}">Calculer</button>
           </article>`)}
         </div>
@@ -2600,7 +2649,7 @@ VIEWS['signup-pro'] = {
           ${field('phone', 'Téléphone', { type: 'tel', auto: 'tel', inputmode: 'tel', placeholder: '+41 79 123 45 67 ou 06 12 34 56 78' })}
         </fieldset>
         <fieldset class="group"><legend>Services proposés</legend>
-          <div class="check-grid">${Object.entries(P.SERVICES).map(([k, s]) => html`<label class="check-tile">
+          <div class="check-grid">${liveServices().map(([k, s]) => html`<label class="check-tile">
             <input type="checkbox" name="services" value="${k}" data-group="1">${icon(SERVICE_ICON[k])}<span>${s.label}</span></label>`)}</div>
         </fieldset>
         ${applicationFields({})}
@@ -3101,13 +3150,15 @@ function bookingSummary(b) {
         <div><strong>${def.formulas[b.formula].label}</strong><small>${def.label}</small></div></div>
       <dl class="sum-list">
         <div><dt>Détails</dt><dd>${detailsLine({ service: b.service, details: detailsOf(b) }) || '—'}</dd></div>
+        ${b.service === 'car' ? html`<div><dt>Voiture</dt><dd>${b.car_model || 'À indiquer'}</dd></div>` : ''}
         <div><dt>Quand</dt><dd>${when ? `${cap(fmtDayLong(when))} à ${fmtTime(when)}` : 'À choisir'}</dd></div>
         <div><dt>Où</dt><dd>${b.address ? `${b.address}, ${b.postal_code} ${b.city}` : 'À indiquer'}</dd></div>
       </dl>
     </div>
     <div class="ticket-perf" aria-hidden="true"></div>
     <div class="ticket-stub">
-      <span class="stub-label">Prix fixe</span>
+      <span class="stub-label">${promoOn() ? PROMO.label : 'Prix fixe'}</span>
+      ${bookingRegular(b, true) ? html`<span class="was-line">${wasTag(bookingRegular(b, true))}</span>` : ''}
       <strong class="price">${fmtMoney(q.price)}</strong>
       <span class="stub-sub">Environ ${fmtHours(q.hours)} de travail${q.urgent ? html`, supplément urgence de ${pct(S.settings.urgent_surcharge)} inclus` : ''}</span>
     </div>
@@ -3125,16 +3176,16 @@ function stepService(b) {
   const def = P.SERVICES[b.service];
   return html`<h2 class="step-title">Quel nettoyage ?</h2>
     <div class="tile-grid" role="radiogroup" aria-label="Service">
-      ${Object.entries(P.SERVICES).map(([k, s]) => html`<button type="button" role="radio" aria-checked="${String(k === b.service)}"
+      ${liveServices().map(([k, s]) => html`<button type="button" role="radio" aria-checked="${String(k === b.service)}"
         class="tile ${k === b.service ? 'is-on' : ''}" data-act="b-service" data-v="${k}">
-        ${icon(SERVICE_ICON[k])}<strong>${s.label}</strong><small>dès ${fmtMoney(fromPrice(k))}</small></button>`)}
+        ${icon(SERVICE_ICON[k])}<strong>${s.label}</strong><small>dès ${wasTag(fromRegular(k))} ${fmtMoney(fromPrice(k))}</small></button>`)}
     </div>
     <h2 class="step-title">Formule</h2>
     <div class="radio-list" role="radiogroup" aria-label="Formule">
       ${Object.entries(def.formulas).map(([k, f]) => html`<button type="button" role="radio" aria-checked="${String(k === b.formula)}"
         class="radio-row ${k === b.formula ? 'is-on' : ''}" data-act="b-formula" data-v="${k}">
         <span class="radio-dot"></span><span class="radio-txt"><strong>${f.label}</strong><small>${f.desc}</small></span>
-        <span class="radio-price">${fmtMoney(P.quote(b.service, k, detailsOf(b), null, S.settings).price)}</span></button>`)}
+        <span class="radio-price">${wasTag(regularPrice(b.service, k, detailsOf(b), null))} ${fmtMoney(P.quote(b.service, k, detailsOf(b), null, S.settings).price)}</span></button>`)}
     </div>`;
 }
 
@@ -3153,7 +3204,12 @@ function stepDetails(b) {
       <div class="tile-grid tile-grid-4" role="radiogroup" aria-label="Véhicule">
         ${Object.entries(def.sizes).map(([k, s]) => html`<button type="button" role="radio" aria-checked="${String(k === b.size)}"
           class="tile tile-sm ${k === b.size ? 'is-on' : ''}" data-act="b-size" data-v="${k}">${icon('car')}<strong>${s.label}</strong></button>`)}
-      </div>`}
+      </div>
+      <h2 class="step-title">Modèle de la voiture</h2>
+      <label class="field"><span>Marque et modèle</span>
+        <input data-input="b-field" name="car_model" value="${b.car_model || ''}" maxlength="60" autocomplete="off"
+          placeholder="Ex. Peugeot 208, VW Golf, Tesla Model 3" required></label>
+      <p class="form-error" role="alert" id="b-error" hidden></p>`}
     <h2 class="step-title">Options</h2>
     <div class="opt-list">
       ${Object.entries(def.options).map(([k, o]) => {
@@ -3220,6 +3276,7 @@ function stepConfirm(b) {
     <dl class="recap">
       <div><dt>Service</dt><dd>${P.SERVICES[b.service].formulas[b.formula].label}, ${P.SERVICES[b.service].label.toLowerCase()}</dd></div>
       <div><dt>Détails</dt><dd>${detailsLine({ service: b.service, details: detailsOf(b) })}</dd></div>
+      ${b.service === 'car' ? html`<div><dt>Voiture</dt><dd>${b.car_model}</dd></div>` : ''}
       <div><dt>Date</dt><dd>${cap(fmtDayLong(scheduledIso(b)))} à ${fmtTime(scheduledIso(b))}</dd></div>
       <div><dt>Durée estimée</dt><dd>${fmtHours(q.hours)}</dd></div>
       <div><dt>Adresse</dt><dd>${b.address}, ${b.postal_code} ${b.city}</dd></div>
@@ -3272,10 +3329,11 @@ INPUTS['b-surface-num'] = (el) => setSurface(el.value, 'num');
 INPUTS['b-field'] = (el) => {
   ensureBooking()[el.name] = el.value;
   saveDraft();
-  if (el.name === 'address' || el.name === 'city' || el.name === 'postal_code') repaintSummary();
+  if (el.name === 'address' || el.name === 'city' || el.name === 'postal_code' || el.name === 'car_model') repaintSummary();
 };
 
 function bookingError(b) {
+  if (b.step === 1 && b.service === 'car' && !(b.car_model && b.car_model.trim().length >= 2)) return 'Indiquez le modèle de la voiture.';
   if (b.step === 2 && !(b.day && b.time)) return 'Choisissez une heure d’arrivée.';
   if (b.step === 2 && !slotOpen(b.day, b.time)) return 'Ce créneau n’est plus disponible, choisissez-en un autre.';
   if (b.step === 3) {
@@ -3298,6 +3356,11 @@ ACTIONS['b-next'] = () => {
   saveDraft();
   refresh().then(() => window.scrollTo(0, 0));
 };
+// Le modèle de voiture part dans les infos pour le pro
+function bookingNotes(b) {
+  const model = b.service === 'car' && b.car_model ? `Voiture : ${b.car_model.trim()}` : '';
+  return [model, (b.notes || '').trim()].filter(Boolean).join('\n').slice(0, 1000);
+}
 ACTIONS['b-confirm'] = async (btn) => {
   const b = ensureBooking();
   if (!S.session) { S.afterLogin = '#reserver'; saveDraft(); go('inscription'); return; }
@@ -3305,7 +3368,7 @@ ACTIONS['b-confirm'] = async (btn) => {
   const m = await run(btn, () => S.api.createMission({
     service: b.service, formula: b.formula, details: detailsOf(b), scheduled_at: scheduledIso(b),
     address: b.address.trim(), postal_code: b.postal_code.trim(), city: b.city.trim(),
-    contact_name: b.contact_name.trim(), contact_phone: b.contact_phone.trim(), notes: b.notes.trim(),
+    contact_name: b.contact_name.trim(), contact_phone: b.contact_phone.trim(), notes: bookingNotes(b),
   }));
   S.booking = null;
   clearDraft();
@@ -4036,7 +4099,8 @@ VIEWS['admin-settings'] = {
       <div class="cols cols-wide">
         <form data-form="settings" class="panel form">
           <div class="grid-2">
-            <label class="field"><span>Tarif horaire</span><span class="input-unit"><input name="hourly_rate" type="number" step="0.5" min="10" max="500" value="${s.hourly_rate}" data-input="set-preview"><em>${s.currency}/h</em></span></label>
+            <label class="field"><span>Tarif horaire</span><span class="input-unit"><input name="hourly_rate" type="number" step="0.01" min="10" max="500" value="${s.hourly_rate}" data-input="set-preview"><em>${s.currency}/h</em></span>
+              <small class="muted">Prix habituel : ${PROMO.regularRate}. Promo de la semaine (−${PROMO.pct} %, prix barrés sur le site) : ${Math.round(PROMO.regularRate * (100 - PROMO.pct)) / 100}, jusqu’au ${PROMO.untilLabel}.</small></label>
             <label class="field"><span>Devise</span><select name="currency" data-change="set-preview">
               ${['CHF', 'EUR'].map((c) => html`<option ${c === s.currency ? raw('selected') : ''}>${c}</option>`)}</select></label>
             <label class="field"><span>Commission Proova</span><span class="input-unit"><input name="commission" type="number" step="1" min="0" max="90" value="${Math.round(s.commission_rate * 100)}" data-input="set-preview"><em>%</em></span></label>
@@ -4110,7 +4174,7 @@ VIEWS.profile = {
               ${field('city', 'Ville', { value: p.city, auto: 'address-level2', required: false })}
             </div>`}
             ${isPro ? html`<fieldset class="field"><legend>Services proposés</legend>
-                <div class="check-grid">${Object.entries(P.SERVICES).map(([k, s]) => html`<label class="check-tile">
+                <div class="check-grid">${liveServices(p.services).map(([k, s]) => html`<label class="check-tile">
                   <input type="checkbox" name="services" value="${k}" data-group="1" ${(p.services || []).includes(k) ? raw('checked') : ''}>${icon(SERVICE_ICON[k])}<span>${s.label}</span></label>`)}</div>
               </fieldset>
               <label class="field"><span>Présentation <em>(visible par l’équipe)</em></span>
@@ -4176,7 +4240,7 @@ ACTIONS['become-pro'] = () => openSheet(html`<h2 id="sheet-title">Devenir presta
   <p class="muted">Votre compte passe en mode prestataire. L’équipe Proova valide votre profil avant vos premières missions.</p>
   <form data-form="become-pro" class="form">
     <fieldset class="field"><legend>Services proposés</legend>
-      <div class="check-grid">${Object.entries(P.SERVICES).map(([k, s]) => html`<label class="check-tile">
+      <div class="check-grid">${liveServices().map(([k, s]) => html`<label class="check-tile">
         <input type="checkbox" name="services" value="${k}" data-group="1">${icon(SERVICE_ICON[k])}<span>${s.label}</span></label>`)}</div></fieldset>
     <label class="field"><span>Présentation <em>(facultatif)</em></span><textarea name="bio" rows="3" maxlength="500"></textarea></label>
     ${applicationFields({})}
