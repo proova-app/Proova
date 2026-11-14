@@ -230,6 +230,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
   box-shadow: 0 6px 20px rgba(15, 39, 65, .25);
 }
 .wa-float svg { width: 24px; height: 24px; }
+.pay-box { margin-top: 14px; display: grid; gap: 10px; padding: 16px; border-radius: var(--r); background: var(--ok-soft); }
+.pay-box p:first-child { display: flex; justify-content: space-between; align-items: baseline; }
+.pay-box strong { font-size: 24px; font-variant-numeric: tabular-nums; }
 
 .quote .ticket-body { display: grid; gap: 18px; }
 .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; background: var(--mist); border-radius: 14px; }
@@ -2484,6 +2487,8 @@ ACTIONS['q-pick'] = (el) => {
 // ---------------------------------------------------------------- page d'accueil
 const PROOVA_WA = '33775799419';
 const HOME_PICK = { car: 'Ma voiture', home: 'Ma maison', office: 'Mes bureaux', outdoor: 'Mon extérieur' };
+const PAY_LINKS = { EUR: 'https://buy.stripe.com/28E5kD2NV9rzdWVbOAaAw04', CHF: 'https://buy.stripe.com/9B66oH74b1Z7cSR05SaAw05' };
+const payLink = () => PAY_LINKS[String(S.settings.currency || '').toUpperCase()] || PAY_LINKS.EUR;
 const waLink = (msg) => `https://wa.me/${PROOVA_WA}?text=${encodeURIComponent(msg)}`;
 ACTIONS['h-pick'] = (el) => {
   const b = ensureBooking();
@@ -3609,12 +3614,16 @@ function clientMissionPanel(m, pro) {
     accepted: 'Votre pro est réservé. Il vous écrit ici s’il a besoin d’une précision.',
     on_the_way: 'Votre pro est en route.',
     in_progress: 'La mission est en cours.',
-    done: 'Mission terminée. Vous recevez la facture par email.',
+    done: 'Mission terminée. Vous pouvez la régler par carte ci-dessous.',
     cancelled: '',
   }[m.status];
   return html`<h2 class="panel-title">Votre pro</h2>
     ${personCard(pro, 'Prestataire', 'Nous cherchons un pro disponible pour ce créneau.')}
     ${msg ? html`<p class="muted">${msg}</p>` : ''}
+    ${m.status === 'done' ? html`<div class="pay-box">
+      <p><small>À régler</small><strong>${fmtMoney(m.price)}</strong></p>
+      <a class="btn btn-primary btn-block" href="${payLink()}" target="_blank" rel="noopener">${icon('wallet')}Payer par carte</a>
+      <p class="muted small">Sur la page de paiement, indiquez ${fmtMoney(m.price)} et la référence ${m.ref}.</p></div>` : ''}
     ${canCancel ? html`<div class="actions"><button class="btn btn-ghost btn-danger" data-act="m-cancel">Annuler la réservation</button></div>` : ''}`;
 }
 
