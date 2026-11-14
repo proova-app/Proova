@@ -230,6 +230,17 @@ button, input, select, textarea { font: inherit; color: inherit; }
   box-shadow: 0 6px 20px rgba(15, 39, 65, .25);
 }
 .wa-float svg { width: 24px; height: 24px; }
+.gate { min-height: 100vh; max-width: 560px; margin: 0 auto; padding: 48px 20px; display: grid; align-content: center; justify-items: center; text-align: center; gap: 6px; }
+.gate h1 { margin-top: 28px; font-size: clamp(36px, 9vw, 56px); font-weight: 800; letter-spacing: -0.04em; line-height: 1.02; }
+.gate-grid { margin-top: 28px; width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.gate-btn { display: grid; justify-items: center; gap: 6px; padding: 26px 12px 22px; background: var(--surface); border: 2px solid var(--line);
+  border-radius: var(--r-lg); color: var(--ink); font: inherit; cursor: pointer; box-shadow: 0 10px 24px rgba(15, 39, 65, .07); }
+.gate-btn:hover { border-color: var(--ink); }
+.gate-btn:active { transform: scale(.98); }
+.gate-flag { font-size: 52px; line-height: 1; }
+.gate-btn strong { font-size: 22px; font-weight: 800; }
+.gate-btn small { color: var(--muted); font-weight: 600; font-size: 14px; }
+.country-btn { gap: 6px; padding-left: 12px; padding-right: 12px; }
 .pay-box { margin-top: 14px; display: grid; gap: 10px; padding: 16px; border-radius: var(--r); background: var(--ok-soft); }
 .pay-box p:first-child { display: flex; justify-content: space-between; align-items: baseline; }
 .pay-box strong { font-size: 24px; font-variant-numeric: tabular-nums; }
@@ -1897,7 +1908,9 @@ const V = () => S.view;
 
 // ---------------------------------------------------------------- formats
 const TZ = undefined; // fuseau du navigateur
-const fmtMoney = (v, cur) => P.formatMoney(v, cur || S.settings.currency);
+const COUNTRY_CUR = { CH: 'CHF', FR: 'EUR' };
+const viewCur = (cur) => (S.country && role() !== 'admin' ? COUNTRY_CUR[S.country] : cur);
+const fmtMoney = (v, cur) => P.formatMoney(v, viewCur(cur || S.settings.currency));
 const fmtHours = (h) => P.formatHours(Number(h) || 0);
 const d = (iso) => new Date(iso);
 const fmtDay = (iso) => d(iso).toLocaleDateString('fr-CH', { weekday: 'short', day: 'numeric', month: 'short', timeZone: TZ });
@@ -2097,6 +2110,8 @@ function store(kind) {
 }
 // Brouillon de réservation : gardé même si l'email de confirmation s'ouvre dans un autre onglet
 const DRAFTS = store('localStorage');
+function loadCountry() { try { const c = DRAFTS && DRAFTS.getItem('proova_country'); return COUNTRY_CUR[c] ? c : null; } catch (e) { return null; } }
+function saveCountry(c) { S.country = c; if (DRAFTS) try { DRAFTS.setItem('proova_country', c); } catch (e) { /* plein */ } }
 function saveDraft() { if (DRAFTS) try { DRAFTS.setItem('proova_booking', JSON.stringify(S.booking)); } catch (e) { /* plein */ } }
 function loadDraft() { if (!DRAFTS) return null; try { return JSON.parse(DRAFTS.getItem('proova_booking')); } catch (e) { return null; } }
 function clearDraft() { if (DRAFTS) DRAFTS.removeItem('proova_booking'); }
@@ -2488,8 +2503,23 @@ ACTIONS['q-pick'] = (el) => {
 const PROOVA_WA = '33775799419';
 const HOME_PICK = { car: 'Ma voiture', home: 'Ma maison', office: 'Mes bureaux', outdoor: 'Mon extérieur' };
 const PAY_LINKS = { EUR: 'https://buy.stripe.com/28E5kD2NV9rzdWVbOAaAw04', CHF: 'https://buy.stripe.com/9B66oH74b1Z7cSR05SaAw05' };
-const payLink = () => PAY_LINKS[String(S.settings.currency || '').toUpperCase()] || PAY_LINKS.EUR;
+const payLink = () => PAY_LINKS[S.country ? COUNTRY_CUR[S.country] : String(S.settings.currency || '').toUpperCase()] || PAY_LINKS.EUR;
 const waLink = (msg) => `https://wa.me/${PROOVA_WA}?text=${encodeURIComponent(msg)}`;
+const AREA = { FR: 'Les Rousses et la Station des Rousses' };
+const areaText = (s) => (S.country && AREA[S.country]) || s.service_area;
+function countryGate() {
+  return html`<main class="gate" id="main">
+    ${logo('logo-lg')}
+    <h1>Bonjour&nbsp;! Vous êtes où&nbsp;?</h1>
+    <p class="pick-lead">On vous montre les bons prix pour chez vous.</p>
+    <div class="gate-grid">
+      <button type="button" class="gate-btn" data-act="set-country" data-v="CH"><span class="gate-flag" aria-hidden="true">🇨🇭</span><strong>En Suisse</strong><small>Prix en francs (CHF)</small></button>
+      <button type="button" class="gate-btn" data-act="set-country" data-v="FR"><span class="gate-flag" aria-hidden="true">🇫🇷</span><strong>En France</strong><small>Prix en euros (€)</small></button>
+    </div>
+  </main>`;
+}
+ACTIONS['set-country'] = (el) => { saveCountry(el.dataset.v); window.scrollTo(0, 0); refresh(); };
+ACTIONS['pick-country'] = () => { S.country = null; if (DRAFTS) try { DRAFTS.removeItem('proova_country'); } catch (e) { /* rien */ } window.scrollTo(0, 0); refresh(); };
 ACTIONS['h-pick'] = (el) => {
   const b = ensureBooking();
   if (b.service !== el.dataset.v) setService(b, el.dataset.v);
@@ -2502,6 +2532,7 @@ VIEWS.home = {
   layout: 'public',
   title: () => 'Nettoyage voiture et maison au prix affiché',
   render() {
+    if (!S.country && !S.session) return countryGate();
     const s = S.settings;
     const share = Math.round((1 - Number(s.commission_rate)) * 100);
     const sample = P.quote('home', 'regular', { surface: 70 }, null, s).price;
@@ -2515,6 +2546,7 @@ VIEWS.home = {
         <a href="#accueil" data-act="scroll" data-target="faq">Questions</a>
       </nav>
       <div class="site-cta">
+        ${S.country ? html`<button type="button" class="btn btn-ghost country-btn" data-act="pick-country" aria-label="Changer de pays">${S.country === 'FR' ? '🇫🇷' : '🇨🇭'}<span>${COUNTRY_CUR[S.country] === 'EUR' ? '€' : 'CHF'}</span></button>` : ''}
         ${logged ? html`<a class="btn" href="#${homeFor()}">Mon espace</a>`
           : html`<a class="btn btn-ghost" href="#connexion">Se connecter</a>`}
       </div>
@@ -2614,14 +2646,14 @@ VIEWS.home = {
         <details><summary>Qui sont les prestataires ?</summary>
           <p>Des indépendants et des petites entreprises que l’équipe Proova valide avant leur première mission.
             Après chaque prestation, vous les notez : les notes sont visibles par les clients suivants.</p></details>
-        <details><summary>Où intervenez-vous ?</summary><p>${s.service_area}.</p></details>
+        <details><summary>Où intervenez-vous ?</summary><p>${areaText(s)}.</p></details>
         <details><summary>Les produits sont-ils fournis ?</summary>
           <p>Oui, le prix inclut les produits et le matériel. Précisez dans la réservation si vous préférez les vôtres.</p></details>
       </section>
     </main>
     <footer class="site-foot">
       ${logo()}
-      <p>${s.service_area}</p>
+      <p>${areaText(s)}</p>
       ${s.contact_phone ? html`<p><a href="${telHref(s.contact_phone)}">${s.contact_phone}</a></p>` : ''}
       <p class="muted">© ${new Date().getFullYear()} Proova</p>
       <a class="wa-float" href="${waLink('Bonjour Proova, j’ai une question sur un nettoyage.')}" target="_blank" rel="noopener" aria-label="Écrire à Proova sur WhatsApp">
@@ -4371,6 +4403,7 @@ async function syncSession() {
 }
 
 async function boot() {
+  S.country = loadCountry();
   const root = $('#app');
   root.innerHTML = str(html`<div class="splash">${logo('logo-lg')}</div>`);
   const hashError = /error_description=([^&]+)/.exec(location.hash);
