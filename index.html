@@ -422,6 +422,26 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .topbar, .tabbar { display: none; }
 .main { padding: 36px 40px 64px; max-width: 1180px; width: 100%; min-width: 0; }
 .main-plain { margin: 0 auto; padding: 8px 24px 64px; max-width: 1180px; }
+.legal { max-width: 72ch; margin: 8px auto 0; padding: 8px 0 24px; }
+.legal h1 { font-size: clamp(30px, 6vw, 42px); font-weight: 800; letter-spacing: -0.035em; }
+.legal .legal-date { margin-top: 8px; color: var(--muted); font-size: 14px; }
+.legal h2 { margin: 32px 0 10px; font-size: 21px; }
+.legal p, .legal li, .legal td { color: var(--ink-2); line-height: 1.6; }
+.legal p + p { margin-top: 10px; }
+.legal ul { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; }
+.legal strong, .legal th { color: var(--ink); }
+.legal a { text-underline-offset: 3px; }
+.legal-box { margin-top: 18px; padding: 16px 18px; border: 1.5px solid var(--line); border-radius: var(--r); background: var(--surface); }
+.legal-box ul { margin: 0; }
+.legal table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 15px; }
+.legal th, .legal td { text-align: left; vertical-align: top; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+.legal code { font-size: 13px; overflow-wrap: anywhere; }
+.legal th:first-child, .legal td:first-child { width: 38%; }
+.legal ul + p { margin-top: 12px; }
+.legal-links { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; }
+.legal-links a { color: var(--ink-2); text-underline-offset: 3px; }
+.gate .legal-links { margin-top: 28px; justify-content: center; }
+.auth-foot { padding: 0 24px 28px; display: flex; justify-content: center; }
 .avatar {
   display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--glove);
   color: #fff; font-weight: 700; font-size: 14px; flex: none; text-decoration: none; letter-spacing: 0;
@@ -2275,11 +2295,14 @@ function store(kind) {
 }
 // Brouillon de réservation : gardé même si l'email de confirmation s'ouvre dans un autre onglet
 const DRAFTS = store('localStorage');
+// Code de la personne qui a recommandé Proova (?ref=...) : gardé pendant la visite, puis seulement
+// dans la réservation en cours. Rien d'autre n'est enregistré : pas besoin de bandeau cookies.
 function loadRef() {
   try {
+    if (DRAFTS) DRAFTS.removeItem('proova_ref'); // anciennes versions du site
     const fromUrl = (new URLSearchParams(location.search).get('ref') || '').replace(/[^\p{L}\p{N}_-]/gu, '').slice(0, 24);
-    if (fromUrl && DRAFTS) DRAFTS.setItem('proova_ref', fromUrl);
-    return fromUrl || (DRAFTS && DRAFTS.getItem('proova_ref')) || null;
+    const d = loadDraft();
+    return fromUrl || (d && typeof d.ref === 'string' ? d.ref.slice(0, 24) : null) || null;
   } catch (e) { return null; }
 }
 function loadPromoParam() {
@@ -2295,7 +2318,7 @@ function loadCountry() {
   try { const c = DRAFTS && DRAFTS.getItem('proova_country'); return COUNTRY_CUR[c] ? c : (IS_BOT ? 'FR' : null); } catch (e) { return IS_BOT ? 'FR' : null; }
 }
 function saveCountry(c) { S.country = c; if (DRAFTS) try { DRAFTS.setItem('proova_country', c); } catch (e) { /* plein */ } }
-function saveDraft() { if (DRAFTS) try { DRAFTS.setItem('proova_booking', JSON.stringify(S.booking)); } catch (e) { /* plein */ } }
+function saveDraft() { if (DRAFTS) try { if (S.booking && S.ref) S.booking.ref = S.ref; DRAFTS.setItem('proova_booking', JSON.stringify(S.booking)); } catch (e) { /* plein */ } }
 function loadDraft() { if (!DRAFTS) return null; try { return JSON.parse(DRAFTS.getItem('proova_booking')); } catch (e) { return null; } }
 function clearDraft() { if (DRAFTS) DRAFTS.removeItem('proova_booking'); }
 
@@ -2308,8 +2331,9 @@ const ROUTES = {
   'nouveau-mdp': 'reset', reserver: 'book', reservations: 'client-list', missions: 'pro-open', planning: 'pro-list',
   gains: 'pro-earnings', profil: 'profile', admin: 'admin', 'admin-missions': 'admin-missions',
   'admin-equipe': 'admin-team', 'admin-tarifs': 'admin-settings', conciergeries: 'concierge', logements: 'logements',
+  'mentions-legales': 'legal', confidentialite: 'privacy', cookies: 'privacy',
 };
-const PUBLIC = new Set(['home', 'login', 'signup', 'signup-pro', 'forgot', 'reset', 'book', 'concierge']);
+const PUBLIC = new Set(['home', 'login', 'signup', 'signup-pro', 'forgot', 'reset', 'book', 'concierge', 'legal', 'privacy']);
 const ROLE_ONLY = {
   'pro-open': 'provider', 'pro-list': 'provider', 'pro-earnings': 'provider',
   admin: 'admin', 'admin-missions': 'admin', 'admin-team': 'admin', 'admin-settings': 'admin',
@@ -2457,7 +2481,8 @@ ACTIONS['demo-reset'] = async (btn) => {
 function authLayout(body) {
   return html`${demoBar()}<div class="auth">
     <header class="auth-top"><a href="#accueil" class="logo-link" aria-label="Accueil Proova">${logo()}</a></header>
-    <main class="auth-main" id="main">${body}</main></div>`;
+    <main class="auth-main" id="main">${body}</main>
+    <footer class="auth-foot">${legalLinks()}</footer></div>`;
 }
 
 function plainLayout(body) {
@@ -2702,6 +2727,7 @@ function countryGate() {
       <button type="button" class="gate-btn" data-act="set-country" data-v="CH"><span class="gate-flag" aria-hidden="true">🇨🇭</span><strong>En Suisse</strong><small>Prix en francs (CHF)</small></button>
       <button type="button" class="gate-btn" data-act="set-country" data-v="FR"><span class="gate-flag" aria-hidden="true">🇫🇷</span><strong>En France</strong><small>Prix en euros (€)</small></button>
     </div>
+    ${legalLinks()}
   </main>`;
 }
 ACTIONS['set-country'] = (el) => { saveCountry(el.dataset.v); window.scrollTo(0, 0); refresh(); };
@@ -2712,6 +2738,149 @@ ACTIONS['h-pick'] = (el) => {
   b.step = 0;
   saveDraft();
   go('reserver');
+};
+
+/* ============================================================ pages légales */
+// Identité de l'éditeur (loi LCEN). Les cases vides ne s'affichent pas : à compléter dès que possible.
+const EDITOR = {
+  name: '',      // nom et prénom de l'exploitant, la page ajoute « EI »
+  address: '',   // adresse de l'entreprise (domicile ou société de domiciliation)
+  city: 'Les Rousses (39220), France',
+  siret: '',     // immatriculation en cours
+  email: '',     // e-mail de contact de Proova
+  phone: '+33 7 75 79 94 19',
+};
+const LEGAL_UPDATED = '15 novembre 2026';
+const SITE_URL = 'https://proova-app.github.io/Proova/';
+
+const legalLinks = () => html`<nav class="legal-links" aria-label="Informations légales">
+  <a href="#mentions-legales">Mentions légales</a><a href="#confidentialite">Confidentialité et cookies</a></nav>`;
+
+function editorContact() {
+  return html`<li><strong>Téléphone et WhatsApp&nbsp;:</strong> <a href="${telHref(EDITOR.phone)}">${EDITOR.phone}</a></li>
+    ${EDITOR.email ? html`<li><strong>E-mail&nbsp;:</strong> <a href="mailto:${EDITOR.email}">${EDITOR.email}</a></li>` : ''}`;
+}
+function editorWho() {
+  return EDITOR.name ? html`${EDITOR.name}, entrepreneur individuel (EI), nom commercial <strong>Proova</strong>`
+    : html`<strong>Proova</strong>, entreprise individuelle (EI)`;
+}
+
+VIEWS.legal = {
+  get layout() { return S.session ? 'app' : 'plain'; },
+  title: () => 'Mentions légales',
+  render() {
+    return html`<article class="legal">
+      <h1>Mentions légales</h1>
+      <p class="legal-date">Mise à jour le ${LEGAL_UPDATED}</p>
+
+      <h2>Qui édite ce site&nbsp;?</h2>
+      <p>Le site Proova (<a href="${SITE_URL}">${SITE_URL.replace('https://', '')}</a>) est édité par ${editorWho()}.</p>
+      <div class="legal-box"><ul>
+        ${EDITOR.name ? html`<li><strong>Exploitant&nbsp;:</strong> ${EDITOR.name} (EI)</li>` : ''}
+        <li><strong>Adresse&nbsp;:</strong> ${EDITOR.address ? `${EDITOR.address}, ` : ''}${EDITOR.city}</li>
+        <li><strong>SIRET&nbsp;:</strong> ${EDITOR.siret || 'immatriculation en cours'}</li>
+        <li><strong>TVA&nbsp;:</strong> TVA non applicable, article 293 B du Code général des impôts</li>
+        ${editorContact()}
+      </ul></div>
+
+      <h2>Directeur de la publication</h2>
+      <p>${EDITOR.name ? html`${EDITOR.name}, exploitant de Proova.` : 'L’exploitant de Proova (entrepreneur individuel).'}</p>
+
+      <h2>Hébergement</h2>
+      <p><strong>Le site</strong> est hébergé par GitHub, Inc. (service GitHub Pages), 88 Colin P Kelly Jr Street,
+        San Francisco, CA 94107, États-Unis. Téléphone&nbsp;: +1 877 448 4820. Site&nbsp;: github.com.</p>
+      <p><strong>Les comptes et les réservations</strong> sont enregistrés chez Supabase (supabase.com),
+        sur des serveurs situés en Irlande, dans l’Union européenne.</p>
+
+      <h2>Paiement</h2>
+      <p>Le paiement par carte est fait sur une page sécurisée de Stripe. Proova ne voit jamais votre numéro de carte.</p>
+
+      <h2>Contenus du site</h2>
+      <p>Les textes, le logo, les images et les vidéos de Proova lui appartiennent. Merci de ne pas les copier sans accord.
+        Pour signaler un contenu ou un problème sur le site, contactez-nous par téléphone ou WhatsApp.</p>
+
+      <h2>Vos données</h2>
+      <p>Pour savoir ce que nous faisons de vos informations et des cookies, lisez la page
+        <a href="#confidentialite">Confidentialité et cookies</a>.</p>
+    </article>`;
+  },
+};
+
+VIEWS.privacy = {
+  get layout() { return S.session ? 'app' : 'plain'; },
+  title: () => 'Confidentialité et cookies',
+  render() {
+    return html`<article class="legal">
+      <h1>Confidentialité et cookies</h1>
+      <p class="legal-date">Mise à jour le ${LEGAL_UPDATED}</p>
+
+      <div class="legal-box"><ul>
+        <li><strong>Pas de publicité, pas de pistage.</strong> Ce site n’utilise aucun cookie publicitaire ni de statistiques.</li>
+        <li><strong>Vos informations servent seulement</strong> à faire vos ménages, à vous tenir au courant et à vous faire payer.</li>
+        <li><strong>On ne vend jamais vos données.</strong></li>
+      </ul></div>
+
+      <h2>Qui est responsable&nbsp;?</h2>
+      <p>${editorWho()}, ${EDITOR.city}. Pour toute question sur vos données&nbsp;:</p>
+      <ul>${editorContact()}</ul>
+
+      <h2>Ce que nous enregistrons, et pourquoi</h2>
+      <ul>
+        <li><strong>Votre compte</strong>&nbsp;: nom, e-mail, téléphone et mot de passe (chiffré).
+          Pour créer votre espace et vous connecter.</li>
+        <li><strong>Vos réservations</strong>&nbsp;: adresse, infos d’accès (code, boîte à clés), surface, date, remarques.
+          Pour que le prestataire puisse faire le travail.</li>
+        <li><strong>Vos logements</strong> (conciergeries et locations)&nbsp;: nom, adresse, surface, accès.
+          Pour réserver un ménage en un clic.</li>
+        <li><strong>Les prestataires</strong>&nbsp;: nom, ville, services, disponibilités, véhicule, SIRET ou IDE, assurance, présentation.
+          Pour vérifier les profils et proposer les missions.</li>
+        <li><strong>Les notes</strong> laissées après une prestation&nbsp;: pour aider les clients suivants.</li>
+        <li><strong>Le paiement</strong>&nbsp;: Stripe s’occupe de votre carte. Nous recevons seulement le montant et le statut du paiement.</li>
+      </ul>
+      <p>Base légale&nbsp;: ces informations sont nécessaires pour vous rendre le service que vous demandez (contrat).
+        Les factures et paiements sont gardés parce que la loi l’impose (comptabilité).</p>
+
+      <h2>Qui peut les voir&nbsp;?</h2>
+      <ul>
+        <li><strong>L’équipe Proova.</strong></li>
+        <li><strong>Le prestataire</strong> qui accepte votre mission&nbsp;: seulement ce qu’il faut pour la faire (adresse, accès, nom, téléphone).</li>
+        <li><strong>Nos outils techniques</strong>, qui n’ont pas le droit de les utiliser pour eux&nbsp;:
+          Supabase (comptes et réservations, serveurs en Irlande), Stripe (paiement), GitHub (hébergement du site),
+          Google Fonts (affichage des polices&nbsp;: votre adresse IP est envoyée à Google) et jsDelivr (envoi du code de connexion).</li>
+        <li><strong>WhatsApp</strong>, seulement si vous cliquez sur le bouton WhatsApp&nbsp;: la discussion suit alors les règles de WhatsApp.</li>
+      </ul>
+      <p>Certains de ces outils sont des entreprises américaines. Ces envois sont encadrés par le Data Privacy Framework UE–États-Unis
+        ou par les clauses contractuelles types de la Commission européenne.</p>
+
+      <h2>Combien de temps&nbsp;?</h2>
+      <ul>
+        <li><strong>Compte</strong>&nbsp;: tant que vous l’utilisez. Sans aucune activité pendant 3 ans, il est supprimé.</li>
+        <li><strong>Réservations, factures et paiements</strong>&nbsp;: 10 ans, comme la loi l’impose pour la comptabilité.</li>
+      </ul>
+
+      <h2>Vos droits</h2>
+      <p>Vous pouvez à tout moment voir, corriger ou faire supprimer vos informations, demander à en recevoir une copie,
+        ou refuser un usage. Écrivez-nous par WhatsApp${EDITOR.email ? ' ou par e-mail' : ''}&nbsp;: réponse sous un mois maximum.</p>
+      <p>Si vous n’êtes pas satisfait de notre réponse, vous pouvez vous plaindre à la CNIL (<a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a>).
+        En Suisse&nbsp;: au Préposé fédéral à la protection des données (<a href="https://www.edoeb.admin.ch" target="_blank" rel="noopener">edoeb.admin.ch</a>).</p>
+
+      <h2 id="cookies">Cookies</h2>
+      <p>Proova n’utilise <strong>aucun cookie publicitaire ni de statistiques</strong>. C’est pour ça qu’il n’y a pas de bandeau cookies.
+        Le site garde seulement dans votre navigateur ce qui est indispensable pour fonctionner&nbsp;:</p>
+      <table>
+        <thead><tr><th scope="col">Nom</th><th scope="col">À quoi ça sert</th><th scope="col">Durée</th></tr></thead>
+        <tbody>
+          <tr><td><code>sb-…-auth-token</code></td><td>Vous garder connecté à votre compte</td><td>Jusqu’à la déconnexion</td></tr>
+          <tr><td><code>proova_country</code></td><td>Retenir votre pays (France ou Suisse) pour afficher les bons prix</td><td>Jusqu’à ce que vous changiez de pays</td></tr>
+          <tr><td><code>proova_booking</code></td><td>Ne pas perdre la réservation que vous êtes en train de faire</td><td>Effacé quand la réservation est envoyée</td></tr>
+          <tr><td><code>proova_promo</code></td><td>Garder le code promo reçu par lien</td><td>Effacé quand le code est utilisé</td></tr>
+        </tbody>
+      </table>
+      <p>Ces éléments sont strictement nécessaires&nbsp;: la loi n’exige donc pas de vous demander votre accord
+        (article 82 de la loi Informatique et Libertés). Vous pouvez les effacer quand vous voulez dans les réglages de votre navigateur.</p>
+      <p>Sur la page de paiement, Stripe utilise ses propres cookies pour sécuriser le paiement et éviter la fraude.</p>
+    </article>`;
+  },
 };
 
 VIEWS.home = {
@@ -2844,6 +3013,7 @@ VIEWS.home = {
       <p>${areaText(s)}</p>
       ${s.contact_phone ? html`<p><a href="${telHref(s.contact_phone)}">${s.contact_phone}</a></p>` : ''}
       <p class="muted">© ${new Date().getFullYear()} Proova</p>
+      ${legalLinks()}
       <a class="wa-float" href="${waLink('Bonjour Proova, j’ai une question sur un nettoyage.')}" target="_blank" rel="noopener" aria-label="Écrire à Proova sur WhatsApp">
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.6.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .1-1.2c0-.1-.2-.2-.5-.3Z"/></svg>
         Une question&nbsp;?
@@ -2908,7 +3078,7 @@ VIEWS.concierge = {
         </ol>
       </section>
     </main>
-    <footer class="site-foot">${logo()}<p>${areaText(s)}</p><p class="muted">© ${new Date().getFullYear()} Proova</p></footer>`;
+    <footer class="site-foot">${logo()}<p>${areaText(s)}</p><p class="muted">© ${new Date().getFullYear()} Proova</p>${legalLinks()}</footer>`;
   },
 };
 ACTIONS['cz-start'] = () => {
@@ -4833,6 +5003,7 @@ VIEWS.profile = {
           <section class="panel">
             <button class="btn btn-ghost btn-block" data-act="logout">${icon('logout')}Se déconnecter</button>
             ${isDemo() ? html`<button class="btn btn-ghost btn-block" data-act="demo-reset">${icon('refresh')}Remettre la démo à zéro</button>` : ''}
+            ${legalLinks()}
           </section>
         </div>
       </div>`;
