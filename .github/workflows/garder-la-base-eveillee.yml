@@ -1,0 +1,19 @@
+# Supabase met en pause les projets gratuits après quelques jours sans activité.
+# Ce petit robot interroge la base Proova tous les deux jours pour qu'elle reste éveillée.
+name: Garder la base Proova éveillée
+
+on:
+  schedule:
+    - cron: '17 6 */2 * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Interroger la base
+        run: |
+          curl -fsS --retry 3 --retry-delay 20 \
+            "https://imydmkyxhosveivrnltz.supabase.co/rest/v1/settings?select=id&limit=1" \
+            -H "apikey: sb_publishable_C_ynbRAFPznO--Aqr4ODUg_tPmC3zxr" -o /dev/null
+          echo "Base Proova éveillée"
