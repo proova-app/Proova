@@ -111,7 +111,11 @@ Deno.serve(async (req) => {
       let pi = m.stripe_payment_intent;
       if (!pi && m.stripe_session_id) pi = (await stripe('GET', `checkout/sessions/${m.stripe_session_id}`)).payment_intent;
       if (!pi) return out({ error: 'Payée hors du site : remboursement à faire à la main' }, 400);
-      await stripe('POST', 'refunds', { payment_intent: pi, 'metadata[mission_id]': m.id });
+      try {
+        await stripe('POST', 'refunds', { payment_intent: pi, 'metadata[mission_id]': m.id });
+      } catch (_) {
+        return out({ error: 'Remboursement à faire à la main dans Stripe (Paiements → ce paiement → Rembourser)' }, 400);
+      }
       await db.from('missions').update({ payment_status: 'refunded' }).eq('id', m.id);
       return out({ refunded: true });
     }
