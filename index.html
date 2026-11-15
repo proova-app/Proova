@@ -4,22 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f2f5f8">
-<meta name="description" content="Proova : réservez le nettoyage de votre voiture ou de votre maison au prix affiché. Prestataires vérifiés, paiement après la prestation.">
+<meta name="description" content="Ménage, fin de séjour et lavage de voiture à domicile aux Rousses, Prémanon, Lamoura et Bois-d’Amont. Prix affiché tout de suite, réservation en 1 minute, paiement avant ou après.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Proova">
 <meta property="og:locale" content="fr_FR">
 <meta property="og:url" content="https://proova-app.github.io/Proova/">
 <meta property="og:title" content="Proova · On nettoie quoi pour vous ?">
-<meta property="og:description" content="Voiture ou maison : le prix s’affiche tout de suite, un pro vérifié vient chez vous, vous payez après le ménage.">
+<meta property="og:description" content="Voiture ou maison : le prix s’affiche tout de suite, un pro vient chez vous aux Rousses. Payez avant ou après le ménage.">
 <meta property="og:image" content="https://proova-app.github.io/Proova/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<title>Proova | Nettoyage voiture et maison au prix affiché</title>
+<title>Proova · Ménage et lavage auto à domicile aux Rousses (Jura)</title>
+<link rel="canonical" href="https://proova-app.github.io/Proova/">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LocalBusiness", "name": "Proova", "url": "https://proova-app.github.io/Proova/", "image": "https://proova-app.github.io/Proova/og.png", "telephone": "+33775799419", "description": "Ménage à domicile, ménage de fin de séjour pour locations de vacances et conciergeries, lavage de voiture à domicile. Prix affiché, paiement par carte avant ou après la prestation.", "priceRange": "40 € - 260 €", "areaServed": ["Les Rousses", "Prémanon", "Lamoura", "Bois-d'Amont", "Morez", "Station des Rousses"], "openingHours": "Mo-Sa 08:00-19:00", "makesOffer": [{"@type": "Offer", "name": "Lavage voiture extérieur à domicile", "price": "40", "priceCurrency": "EUR"}, {"@type": "Offer", "name": "Nettoyage intérieur voiture", "price": "65", "priceCurrency": "EUR"}, {"@type": "Offer", "name": "Nettoyage voiture complet", "price": "95", "priceCurrency": "EUR"}, {"@type": "Offer", "name": "Ménage à domicile", "price": "90", "priceCurrency": "EUR"}, {"@type": "Offer", "name": "Ménage de fin de séjour (location de vacances)", "price": "90", "priceCurrency": "EUR"}]}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 24'%3E%3Ccircle cx='12' cy='12' r='9' fill='%230f2741'/%3E%3Ccircle cx='26' cy='12' r='9' fill='%23ffc933'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 24'%3E%3Ccircle cx='12' cy='12' r='9' fill='%230f2741'/%3E%3Ccircle cx='26' cy='12' r='9' fill='%23e03131'/%3E%3C/svg%3E">
 <style>
 /* ============================================================ Proova — styles */
 :root {
@@ -2288,7 +2290,10 @@ function loadPromoParam() {
   } catch (e) { return null; }
 }
 function forgetPromoParam() { S.promoCode = null; if (DRAFTS) try { DRAFTS.removeItem('proova_promo'); } catch (e) { /* rien */ } }
-function loadCountry() { try { const c = DRAFTS && DRAFTS.getItem('proova_country'); return COUNTRY_CUR[c] ? c : null; } catch (e) { return null; } }
+const IS_BOT = /bot|crawl|spider|slurp|facebookexternalhit|preview/i.test(navigator.userAgent || '');
+function loadCountry() {
+  try { const c = DRAFTS && DRAFTS.getItem('proova_country'); return COUNTRY_CUR[c] ? c : (IS_BOT ? 'FR' : null); } catch (e) { return IS_BOT ? 'FR' : null; }
+}
 function saveCountry(c) { S.country = c; if (DRAFTS) try { DRAFTS.setItem('proova_country', c); } catch (e) { /* plein */ } }
 function saveDraft() { if (DRAFTS) try { DRAFTS.setItem('proova_booking', JSON.stringify(S.booking)); } catch (e) { /* plein */ } }
 function loadDraft() { if (!DRAFTS) return null; try { return JSON.parse(DRAFTS.getItem('proova_booking')); } catch (e) { return null; } }
