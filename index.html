@@ -243,6 +243,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .country-btn { gap: 6px; padding-left: 12px; padding-right: 12px; }
 .btn-trash { margin-left: auto; padding-left: 10px; padding-right: 10px; }
 .btn-trash .ic { margin: 0; }
+.wa-book { margin-top: 10px; color: #13803f; border-color: #1fa855; }
 .pay-box { margin-top: 14px; display: grid; gap: 10px; padding: 16px; border-radius: var(--r); background: var(--ok-soft); }
 .pay-box p:first-child { display: flex; justify-content: space-between; align-items: baseline; }
 .pay-box strong { font-size: 24px; font-variant-numeric: tabular-nums; }
@@ -1471,7 +1472,7 @@ window.PROOVA_CONFIG = {
           details: clone(d.details || {}), address: String(d.address).slice(0, 160), postal_code: String(d.postal_code || '').slice(0, 12),
           city: String(d.city).slice(0, 80), scheduled_at: new Date(sched).toISOString(), contact_name: String(d.contact_name || '').slice(0, 80),
           contact_phone: String(d.contact_phone).slice(0, 30), notes: String(d.notes || '').slice(0, 1000),
-          duration_hours: q.hours, price: q.price, currency: db.settings.currency, commission_rate: db.settings.commission_rate,
+          duration_hours: q.hours, price: q.price, currency: ['CHF', 'EUR'].includes(d.currency) ? d.currency : db.settings.currency, commission_rate: db.settings.commission_rate,
           status: 'pending', payment_status: 'unpaid', rating: null, review: null, cancel_reason: null,
           created_at: nowIso(), accepted_at: null, started_at: null, completed_at: null, cancelled_at: null, rated_at: null,
         };
@@ -1844,6 +1845,7 @@ window.PROOVA_CONFIG = {
         contact_name: d.contact_name || '', contact_phone: d.contact_phone, notes: d.notes || '',
         client_id: this._uid(),
       };
+      if (['CHF', 'EUR'].includes(d.currency)) row.currency = d.currency;
       return this._q(this.sb.from('missions').insert(row).select().single());
     }
 
@@ -2145,6 +2147,13 @@ function store(kind) {
 }
 // Brouillon de réservation : gardé même si l'email de confirmation s'ouvre dans un autre onglet
 const DRAFTS = store('localStorage');
+function loadRef() {
+  try {
+    const fromUrl = (new URLSearchParams(location.search).get('ref') || '').replace(/[^\p{L}\p{N}_-]/gu, '').slice(0, 24);
+    if (fromUrl && DRAFTS) DRAFTS.setItem('proova_ref', fromUrl);
+    return fromUrl || (DRAFTS && DRAFTS.getItem('proova_ref')) || null;
+  } catch (e) { return null; }
+}
 function loadCountry() { try { const c = DRAFTS && DRAFTS.getItem('proova_country'); return COUNTRY_CUR[c] ? c : null; } catch (e) { return null; } }
 function saveCountry(c) { S.country = c; if (DRAFTS) try { DRAFTS.setItem('proova_country', c); } catch (e) { /* plein */ } }
 function saveDraft() { if (DRAFTS) try { DRAFTS.setItem('proova_booking', JSON.stringify(S.booking)); } catch (e) { /* plein */ } }
@@ -3410,7 +3419,7 @@ function stepAddress(b) {
     <div class="form">
       <label class="field"><span>Rue et numéro</span><input data-input="b-field" name="address" value="${b.address}" autocomplete="street-address" required></label>
       <div class="grid-2 grid-npa">
-        <label class="field"><span>NPA</span><input data-input="b-field" name="postal_code" value="${b.postal_code}" inputmode="numeric" autocomplete="postal-code" maxlength="10"></label>
+        <label class="field"><span>${S.country === 'FR' ? 'Code postal' : 'NPA'}</span><input data-input="b-field" name="postal_code" value="${b.postal_code}" inputmode="numeric" autocomplete="postal-code" maxlength="10"></label>
         <label class="field"><span>Ville</span><input data-input="b-field" name="city" value="${b.city}" autocomplete="address-level2" required></label>
       </div>
       <div class="grid-2">
@@ -3440,7 +3449,22 @@ function stepConfirm(b) {
       <li>${icon('wallet')}Rien à payer maintenant. Facture après la prestation.</li>
       <li>${icon('x')}Annulation gratuite tant que le pro n’est pas en route.</li>
     </ul>
-    ${!S.session ? html`<p class="note">Vous allez créer un compte (30 secondes) pour confirmer. Votre réservation est gardée.</p>` : ''}`;
+    ${!S.session ? html`<p class="note">Vous allez créer un compte (30 secondes) pour confirmer. Votre réservation est gardée.</p>
+      <a class="btn btn-ghost btn-block wa-book" href="${waLink(bookingWaText(b, q))}" target="_blank" rel="noopener">${icon('chat')}Ou réserver sans compte, sur WhatsApp</a>` : ''}`;
+}
+function bookingWaText(b, q) {
+  const f = P.SERVICES[b.service];
+  return [
+    'Bonjour Proova, je souhaite réserver :',
+    `• ${f.formulas[b.formula].label}, ${f.label.toLowerCase()} (${detailsLine({ service: b.service, details: detailsOf(b) })})`,
+    b.service === 'car' && b.car_model ? `• Voiture : ${b.car_model}` : '',
+    `• Le ${fmtDayLong(scheduledIso(b))} à ${fmtTime(scheduledIso(b))}`,
+    `• Adresse : ${b.address}, ${b.postal_code} ${b.city}`,
+    `• Contact : ${b.contact_name ? b.contact_name + ', ' : ''}${b.contact_phone}`,
+    b.notes ? `• Infos : ${b.notes}` : '',
+    `• Prix affiché : ${fmtMoney(q.price)}`,
+    S.ref ? `• Code : ${S.ref}` : '',
+  ].filter(Boolean).join('\n');
 }
 
 ACTIONS['b-step'] = (el) => { const b = ensureBooking(); b.step = Number(el.dataset.v); saveDraft(); refresh(); };
@@ -3512,7 +3536,8 @@ ACTIONS['b-next'] = () => {
 // Le modèle de voiture part dans les infos pour le pro
 function bookingNotes(b) {
   const model = b.service === 'car' && b.car_model ? `Voiture : ${b.car_model.trim()}` : '';
-  return [model, (b.notes || '').trim()].filter(Boolean).join('\n').slice(0, 1000);
+  const ref = S.ref ? `Apporté par : ${S.ref}` : '';
+  return [model, (b.notes || '').trim(), ref].filter(Boolean).join('\n').slice(0, 1000);
 }
 ACTIONS['b-confirm'] = async (btn) => {
   const b = ensureBooking();
@@ -3522,6 +3547,7 @@ ACTIONS['b-confirm'] = async (btn) => {
     service: b.service, formula: b.formula, details: detailsOf(b), scheduled_at: scheduledIso(b),
     address: b.address.trim(), postal_code: b.postal_code.trim(), city: b.city.trim(),
     contact_name: b.contact_name.trim(), contact_phone: b.contact_phone.trim(), notes: bookingNotes(b),
+    currency: S.country ? COUNTRY_CUR[S.country] : undefined,
   }));
   S.booking = null;
   clearDraft();
@@ -3689,7 +3715,7 @@ function clientMissionPanel(m, pro) {
     ${msg ? html`<p class="muted">${msg}</p>` : ''}
     ${m.status === 'done' ? html`<div class="pay-box">
       <p><small>À régler</small><strong>${fmtMoney(m.price)}</strong></p>
-      <a class="btn btn-primary btn-block" href="${payLink()}" target="_blank" rel="noopener">${icon('wallet')}Payer par carte</a>
+      <a class="btn btn-primary btn-block" href="${PAY_LINKS[m.currency] || payLink()}" target="_blank" rel="noopener">${icon('wallet')}Payer par carte</a>
       <p class="muted small">Sur la page de paiement, indiquez ${fmtMoney(m.price)} et la référence ${m.ref}.</p></div>` : ''}
     ${canCancel ? html`<div class="actions"><button class="btn btn-ghost btn-danger" data-act="m-cancel">Annuler la réservation</button></div>` : ''}`;
 }
@@ -4459,6 +4485,7 @@ async function syncSession() {
 
 async function boot() {
   S.country = loadCountry();
+  S.ref = loadRef();
   const root = $('#app');
   root.innerHTML = str(html`<div class="splash">${logo('logo-lg')}</div>`);
   const hashError = /error_description=([^&]+)/.exec(location.hash);
