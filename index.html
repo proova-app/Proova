@@ -241,6 +241,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .gate-btn strong { font-size: 22px; font-weight: 800; }
 .gate-btn small { color: var(--muted); font-weight: 600; font-size: 14px; }
 .country-btn { gap: 6px; padding-left: 12px; padding-right: 12px; }
+.btn-trash { margin-left: auto; padding-left: 10px; padding-right: 10px; }
+.btn-trash .ic { margin: 0; }
 .pay-box { margin-top: 14px; display: grid; gap: 10px; padding: 16px; border-radius: var(--r); background: var(--ok-soft); }
 .pay-box p:first-child { display: flex; justify-content: space-between; align-items: baseline; }
 .pay-box strong { font-size: 24px; font-variant-numeric: tabular-nums; }
@@ -1640,6 +1642,36 @@ window.PROOVA_CONFIG = {
       });
     }
 
+    async deleteMission(id) {
+      return this._tx((db) => {
+        this._admin(db);
+        if (!db.missions[id]) throw new ApiError('Mission introuvable');
+        delete db.missions[id];
+        db.messages = db.messages.filter((x) => x.mission_id !== id);
+        return true;
+      });
+    }
+
+    async deleteUser(userId) {
+      return this._tx((db) => {
+        const me = this._admin(db);
+        if (userId === me.id) throw new ApiError('Vous ne pouvez pas supprimer votre propre compte');
+        const p = db.profiles[userId];
+        if (!p) throw new ApiError('Compte introuvable');
+        if (p.role === 'admin') throw new ApiError('Impossible de supprimer un administrateur');
+        for (const [mid, m] of Object.entries(db.missions)) {
+          if (m.client_id === userId) { delete db.missions[mid]; db.messages = db.messages.filter((x) => x.mission_id !== mid); }
+          else if (m.provider_id === userId) {
+            m.provider_id = null;
+            if (['accepted', 'on_the_way', 'in_progress'].includes(m.status)) { m.status = 'pending'; m.accepted_at = null; }
+          }
+        }
+        delete db.profiles[userId];
+        db.users = db.users.filter((u) => u.id !== userId);
+        return true;
+      });
+    }
+
     async setPayment(id, status) {
       return this._tx((db) => {
         this._admin(db);
@@ -1860,6 +1892,8 @@ window.PROOVA_CONFIG = {
       return this._q(this.sb.rpc('admin_set_provider_status', { p_user: userId, p_status: status }));
     }
     async setPayment(id, status) { return this._q(this.sb.rpc('admin_set_payment', { p_id: id, p_status: status })); }
+    async deleteMission(id) { return this._q(this.sb.rpc('admin_delete_mission', { p_id: id })); }
+    async deleteUser(userId) { return this._q(this.sb.rpc('admin_delete_user', { p_user: userId })); }
   }
 
   root.SupabaseBackend = SupabaseBackend;
@@ -1978,6 +2012,7 @@ const ICONS = {
   star: '<path d="m12 3.8 2.5 5.1 5.6.8-4 4 .9 5.6-5-2.7-5 2.7.9-5.6-4-4 5.6-.8z"/>',
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   user: '<circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c.8-4 3.8-6 7.5-6s6.7 2 7.5 6"/>',
   users: '<circle cx="9" cy="9" r="3.3"/><path d="M3 19.5c.6-3.4 3-5.2 6-5.2s5.4 1.8 6 5.2"/><path d="M15 5.9a3.2 3.2 0 0 1 0 6.2M17.5 14.6c2 .6 3.2 2.3 3.5 4.9"/>',
   chart: '<path d="M4 20h16"/><path d="M7 16.5V11M12 16.5V6.5M17 16.5v-4"/>',
@@ -3696,6 +3731,7 @@ function adminMissionPanel(m, pro, client) {
       ${m.status === 'done' ? html`<button class="btn btn-block ${m.payment_status === 'paid' ? '' : 'btn-primary'}" data-act="m-pay" data-v="${m.payment_status === 'paid' ? 'unpaid' : 'paid'}">
         ${icon(m.payment_status === 'paid' ? 'x' : 'check')}${m.payment_status === 'paid' ? 'Marquer comme non payée' : 'Marquer comme payée'}</button>` : ''}
       ${!['done', 'cancelled'].includes(m.status) ? html`<button class="btn btn-ghost btn-danger btn-block" data-act="m-cancel">Annuler la mission</button>` : ''}
+      <button class="btn btn-ghost btn-danger btn-block" data-act="del-ask" data-kind="mission" data-id="${m.id}" data-label="la mission ${m.ref}">${icon('trash')}Supprimer la mission</button>
     </div>`;
 }
 
@@ -4200,16 +4236,35 @@ VIEWS['admin-team'] = {
             ${p.phone ? html`<a class="btn btn-sm btn-ghost" href="${telHref(p.phone)}">${icon('phone')}${p.phone}</a>` : ''}
             ${p.provider_status !== 'approved' ? html`<button class="btn btn-sm btn-primary" data-act="adm-provider" data-u="${p.id}" data-v="approved">Valider</button>` : ''}
             ${p.provider_status === 'approved' ? html`<button class="btn btn-sm btn-ghost btn-danger" data-act="adm-provider" data-u="${p.id}" data-v="suspended">Suspendre</button>` : ''}
+            <button class="btn btn-sm btn-ghost btn-danger btn-trash" data-act="del-ask" data-kind="user" data-id="${p.id}" data-label="le prestataire ${p.full_name || p.email}" aria-label="Supprimer ${p.full_name || 'ce prestataire'}">${icon('trash')}</button>
           </div></article>`)}
           ${!providers.length ? html`<p class="muted">Aucun prestataire inscrit. Partagez le lien de candidature : <a class="link" href="#devenir-pro">Devenir prestataire</a>.</p>` : ''}</div>`
         : html`<div class="table-wrap"><table class="table">
-          <thead><tr><th>Client</th><th>Ville</th><th>Téléphone</th><th class="num">Missions</th><th>Inscrit</th></tr></thead>
+          <thead><tr><th>Client</th><th>Ville</th><th>Téléphone</th><th class="num">Missions</th><th>Inscrit</th><th><span class="sr-only">Supprimer</span></th></tr></thead>
           <tbody>${clients.map((p) => html`<tr><td data-l="Client"><strong>${p.full_name || '—'}</strong><small>${p.email}</small></td>
             <td data-l="Ville">${p.city || '—'}</td><td data-l="Téléphone">${p.phone ? html`<a class="link" href="${telHref(p.phone)}">${p.phone}</a>` : '—'}</td>
-            <td data-l="Missions" class="num">${count(p.id, 'client_id')}</td><td data-l="Inscrit">${fmtDay(p.created_at)}</td></tr>`)}</tbody></table></div>`}`;
+            <td data-l="Missions" class="num">${count(p.id, 'client_id')}</td><td data-l="Inscrit">${fmtDay(p.created_at)}</td>
+            <td><button class="btn btn-sm btn-ghost btn-danger btn-trash" data-act="del-ask" data-kind="user" data-id="${p.id}" data-label="le client ${p.full_name || p.email}" aria-label="Supprimer ce client">${icon('trash')}</button></td></tr>`)}</tbody></table></div>`}`;
   },
 };
 ACTIONS['team-tab'] = (el) => { S.teamTab = el.dataset.v; refresh(); };
+ACTIONS['del-ask'] = (el) => {
+  S.pendingDelete = { kind: el.dataset.kind, id: el.dataset.id };
+  const user = el.dataset.kind === 'user';
+  openSheet(html`<h2 id="sheet-title">${icon('trash')} Supprimer ${el.dataset.label}&nbsp;?</h2>
+    <p class="muted">C’est définitif.${user ? ' Ses réservations en tant que client sont supprimées aussi ; ses missions en tant que pro repassent « à attribuer ».' : ' Les messages de la mission sont supprimés aussi.'}</p>
+    <div class="sheet-actions"><button type="button" class="btn btn-ghost" data-act="close-sheet">Garder</button>
+      <button type="button" class="btn btn-danger-solid" data-act="del-do">${icon('trash')}Supprimer</button></div>`);
+};
+ACTIONS['del-do'] = async (btn) => {
+  const d0 = S.pendingDelete;
+  if (!d0) return;
+  await run(btn, () => (d0.kind === 'mission' ? S.api.deleteMission(d0.id) : S.api.deleteUser(d0.id)), 'Supprimé');
+  S.pendingDelete = null;
+  closeSheet();
+  if (d0.kind === 'mission' && S.route.name === 'mission') go('admin-missions');
+  else refresh();
+};
 
 // ---------------------------------------------------------------- tarifs
 VIEWS['admin-settings'] = {
