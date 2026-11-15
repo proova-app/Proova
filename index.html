@@ -242,6 +242,24 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .gate-btn small { color: var(--muted); font-weight: 600; font-size: 14px; }
 .country-btn { gap: 6px; padding-left: 12px; padding-right: 12px; }
 .btn-trash { margin-left: auto; padding-left: 10px; padding-right: 10px; }
+.promo-box { margin: 18px 0 4px; }
+.promo-row { display: flex; gap: 8px; align-items: stretch; }
+.promo-row input { flex: 1; min-width: 0; text-transform: uppercase; }
+.promo-row select { width: auto; flex: none; }
+.promo-ok { display: flex; gap: 6px; align-items: center; margin: 8px 0 0; color: var(--ok); font-weight: 700; }
+.promo-line { color: var(--ok); font-weight: 700; }
+.promo-list { list-style: none; padding: 0; margin: 0 0 18px; display: grid; gap: 10px; }
+.promo-list li { display: flex; gap: 10px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: var(--r); }
+.promo-list li.is-off { opacity: .55; }
+.promo-txt { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.promo-txt small { color: var(--muted); }
+.promo-link { word-break: break-all; font-size: 12px; }
+.lg-list { display: grid; gap: 12px; margin-bottom: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.lg-head { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+.lg-head > div { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.lg-head small { color: var(--muted); }
+.cz-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.cz-prices { max-width: 560px; }
 .btn-trash .ic { margin: 0; }
 .wa-book { margin-top: 10px; color: #13803f; border-color: #1fa855; }
 .pay-box { margin-top: 14px; display: grid; gap: 10px; padding: 16px; border-radius: var(--r); background: var(--ok-soft); }
@@ -1085,7 +1103,15 @@ window.PROOVA_CONFIG = {
     return min ? `${whole} h ${String(min).padStart(2, '0')}` : `${whole} h`;
   }
 
-  const api = { SERVICES, DEFAULT_SETTINGS, quote, formatMoney, formatHours };
+  // Code promo : même règle que missions_before_insert (montant fixe ou pourcentage arrondi)
+  function discount(price, promo) {
+    if (!promo) return 0;
+    const v = Number(promo.value) || 0;
+    const d = promo.kind === 'percent' ? Math.round(price * v / 100 + 1e-9) : v;
+    return Math.max(0, Math.min(d, price));
+  }
+
+  const api = { SERVICES, DEFAULT_SETTINGS, quote, discount, formatMoney, formatHours };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Pricing = api;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -1391,9 +1417,10 @@ window.PROOVA_CONFIG = {
     async updateProfile(fields) {
       return this._tx((db) => {
         const me = this._need(db);
-        for (const k of ['full_name', 'phone', 'city', 'services', 'bio', 'available', 'country', 'postal_code', 'application']) {
+        for (const k of ['full_name', 'phone', 'city', 'services', 'bio', 'available', 'country', 'postal_code', 'application', 'logements']) {
           if (k in fields) me[k] = fields[k];
         }
+        if (me.logements && (!Array.isArray(me.logements) || me.logements.length > 60)) throw new ApiError('60 logements maximum');
         if (me.country && !['CH', 'FR'].includes(me.country)) throw new ApiError('Pays inconnu');
         if (me.application && JSON.stringify(me.application).length > 4000) throw new ApiError('Candidature trop longue');
         me.services = (me.services || []).filter((s) => ['home', 'office', 'car', 'outdoor'].includes(s));
@@ -1467,14 +1494,22 @@ window.PROOVA_CONFIG = {
         if (!d.city || d.city.length < 2) throw new ApiError('Ville manquante');
         if (!d.contact_phone || d.contact_phone.length < 6) throw new ApiError('Téléphone manquant');
         const q = root.Pricing.quote(d.service, d.formula, d.details, d.scheduled_at, db.settings);
+        let discount = 0, promo_code = null;
+        if (d.promo_code) {
+          const pc = this._promos(db)[String(d.promo_code).trim().toUpperCase()];
+          if (!pc || !pc.active || (pc.max_uses != null && pc.uses >= pc.max_uses)) throw new ApiError('Ce code promo n’est plus valable');
+          discount = root.Pricing.discount(q.price, pc);
+          pc.uses += 1;
+          promo_code = pc.code;
+        }
         const id = uuid();
         db.missions[id] = {
           id, ref: ref(), client_id: me.id, provider_id: null, service: d.service, formula: d.formula,
           details: clone(d.details || {}), address: String(d.address).slice(0, 160), postal_code: String(d.postal_code || '').slice(0, 12),
           city: String(d.city).slice(0, 80), scheduled_at: new Date(sched).toISOString(), contact_name: String(d.contact_name || '').slice(0, 80),
           contact_phone: String(d.contact_phone).slice(0, 30), notes: String(d.notes || '').slice(0, 1000),
-          duration_hours: q.hours, price: q.price, currency: ['CHF', 'EUR'].includes(d.currency) ? d.currency : db.settings.currency, commission_rate: db.settings.commission_rate,
-          status: 'pending', payment_status: 'unpaid', rating: null, review: null, cancel_reason: null,
+          duration_hours: q.hours, price: q.price - discount, discount, promo_code, currency: ['CHF', 'EUR'].includes(d.currency) ? d.currency : db.settings.currency, commission_rate: db.settings.commission_rate,
+          status: 'pending', payment_status: 'unpaid', paid_at: null, rating: null, review: null, cancel_reason: null,
           created_at: nowIso(), accepted_at: null, started_at: null, completed_at: null, cancelled_at: null, rated_at: null,
         };
         return clone(db.missions[id]);
@@ -1644,6 +1679,62 @@ window.PROOVA_CONFIG = {
       });
     }
 
+    // --- codes promo & paiement en ligne (simulé en démo)
+    _promos(db) {
+      if (!db.promos) db.promos = { GROUPE: { code: 'GROUPE', kind: 'amount', value: 10, active: true, max_uses: 10, uses: 0, created_at: nowIso() } };
+      return db.promos;
+    }
+    async checkPromo(code) {
+      const pc = this._promos(this._read())[String(code || '').trim().toUpperCase()];
+      return pc && pc.active && (pc.max_uses == null || pc.uses < pc.max_uses) ? { code: pc.code, kind: pc.kind, value: pc.value } : null;
+    }
+    async listPromos() {
+      return this._tx((db) => { this._admin(db); return clone(Object.values(this._promos(db)).sort((a, b) => b.created_at.localeCompare(a.created_at))); });
+    }
+    async savePromo(p) {
+      return this._tx((db) => {
+        this._admin(db);
+        const code = String(p.code || '').trim().toUpperCase();
+        if (!/^[A-Z0-9]{3,20}$/.test(code)) throw new ApiError('Code : 3 à 20 lettres ou chiffres, sans espace');
+        if (!(Number(p.value) > 0) || (p.kind === 'percent' && Number(p.value) > 100)) throw new ApiError('Réduction invalide');
+        const all = this._promos(db);
+        all[code] = Object.assign({ uses: 0, active: true, created_at: nowIso() }, all[code], {
+          code, kind: p.kind === 'percent' ? 'percent' : 'amount', value: Number(p.value), max_uses: p.max_uses ? Number(p.max_uses) : null,
+        });
+        return clone(all[code]);
+      });
+    }
+    async setPromoActive(code, active) {
+      return this._tx((db) => { this._admin(db); const pc = this._promos(db)[code]; if (pc) pc.active = !!active; return clone(pc); });
+    }
+    async deletePromo(code) {
+      return this._tx((db) => { this._admin(db); delete this._promos(db)[code]; return true; });
+    }
+    _payable(db, id) {
+      const me = this._need(db);
+      const m = db.missions[id];
+      if (!m || (m.client_id !== me.id && me.role !== 'admin')) throw new ApiError('Mission introuvable');
+      return m;
+    }
+    async startCheckout(id) {
+      return this._tx((db) => {
+        const m = this._payable(db, id);
+        if (m.status === 'cancelled') throw new ApiError('Cette réservation est annulée');
+        m.payment_status = 'paid';
+        m.paid_at = nowIso();
+        return { paid: true };
+      });
+    }
+    async verifyPayment(id) { const m = this._payable(this._read(), id); return { paid: m.payment_status === 'paid' }; }
+    async refundPayment(id) {
+      return this._tx((db) => {
+        const m = this._payable(db, id);
+        if (m.status !== 'cancelled' || m.payment_status !== 'paid') throw new ApiError('Rien à rembourser');
+        m.payment_status = 'refunded';
+        return { refunded: true };
+      });
+    }
+
     async deleteMission(id) {
       return this._tx((db) => {
         this._admin(db);
@@ -1802,7 +1893,7 @@ window.PROOVA_CONFIG = {
 
     async updateProfile(fields) {
       const allowed = {};
-      for (const k of ['full_name', 'phone', 'city', 'services', 'bio', 'available', 'country', 'postal_code', 'application']) {
+      for (const k of ['full_name', 'phone', 'city', 'services', 'bio', 'available', 'country', 'postal_code', 'application', 'logements']) {
         if (k in fields) allowed[k] = fields[k];
       }
       return this._q(this.sb.from('profiles').update(allowed).eq('id', this._uid()).select().single());
@@ -1847,6 +1938,7 @@ window.PROOVA_CONFIG = {
         client_id: this._uid(),
       };
       if (['CHF', 'EUR'].includes(d.currency)) row.currency = d.currency;
+      if (d.promo_code) row.promo_code = d.promo_code;
       return this._q(this.sb.from('missions').insert(row).select().single());
     }
 
@@ -1896,6 +1988,39 @@ window.PROOVA_CONFIG = {
     }
     async setPayment(id, status) { return this._q(this.sb.rpc('admin_set_payment', { p_id: id, p_status: status })); }
     async deleteMission(id) { return this._q(this.sb.rpc('admin_delete_mission', { p_id: id })); }
+
+    // --- codes promo
+    async checkPromo(code) {
+      const rows = await this._q(this.sb.rpc('check_promo', { p_code: String(code || '') }));
+      return (rows && rows[0]) || null;
+    }
+    async listPromos() { return this._q(this.sb.from('promo_codes').select('*').order('created_at', { ascending: false })); }
+    async savePromo(p) {
+      const code = String(p.code || '').trim().toUpperCase();
+      if (!/^[A-Z0-9]{3,20}$/.test(code)) throw new root.ApiError('Code : 3 à 20 lettres ou chiffres, sans espace');
+      return this._q(this.sb.from('promo_codes').upsert({
+        code, kind: p.kind === 'percent' ? 'percent' : 'amount', value: Number(p.value), max_uses: p.max_uses ? Number(p.max_uses) : null,
+      }).select().single());
+    }
+    async setPromoActive(code, active) {
+      return this._q(this.sb.from('promo_codes').update({ active: !!active }).eq('code', code).select().single());
+    }
+    async deletePromo(code) { await this._q(this.sb.from('promo_codes').delete().eq('code', code)); return true; }
+
+    // --- paiement par carte (fonction serveur « paiement », clé Stripe côté serveur)
+    async _pay(action, id) {
+      const { data, error } = await this.sb.functions.invoke('paiement', { body: { action, mission_id: id } });
+      if (error) {
+        let msg = error.message;
+        try { const j = await error.context.json(); if (j && j.error) msg = j.error; } catch (e) { /* réponse non JSON */ }
+        throw new root.ApiError(msg || 'Paiement indisponible');
+      }
+      if (data && data.error) throw new root.ApiError(data.error);
+      return data || {};
+    }
+    async startCheckout(id) { return this._pay('checkout', id); }
+    async verifyPayment(id) { return this._pay('verify', id); }
+    async refundPayment(id) { return this._pay('refund', id); }
     async deleteUser(userId) { return this._q(this.sb.rpc('admin_delete_user', { p_user: userId })); }
   }
 
@@ -2155,6 +2280,14 @@ function loadRef() {
     return fromUrl || (DRAFTS && DRAFTS.getItem('proova_ref')) || null;
   } catch (e) { return null; }
 }
+function loadPromoParam() {
+  try {
+    const c = (new URLSearchParams(location.search).get('code') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20);
+    if (c && DRAFTS) DRAFTS.setItem('proova_promo', c);
+    return c || (DRAFTS && DRAFTS.getItem('proova_promo')) || null;
+  } catch (e) { return null; }
+}
+function forgetPromoParam() { S.promoCode = null; if (DRAFTS) try { DRAFTS.removeItem('proova_promo'); } catch (e) { /* rien */ } }
 function loadCountry() { try { const c = DRAFTS && DRAFTS.getItem('proova_country'); return COUNTRY_CUR[c] ? c : null; } catch (e) { return null; } }
 function saveCountry(c) { S.country = c; if (DRAFTS) try { DRAFTS.setItem('proova_country', c); } catch (e) { /* plein */ } }
 function saveDraft() { if (DRAFTS) try { DRAFTS.setItem('proova_booking', JSON.stringify(S.booking)); } catch (e) { /* plein */ } }
@@ -2169,15 +2302,15 @@ const ROUTES = {
   accueil: 'home', connexion: 'login', inscription: 'signup', 'devenir-pro': 'signup-pro', oubli: 'forgot',
   'nouveau-mdp': 'reset', reserver: 'book', reservations: 'client-list', missions: 'pro-open', planning: 'pro-list',
   gains: 'pro-earnings', profil: 'profile', admin: 'admin', 'admin-missions': 'admin-missions',
-  'admin-equipe': 'admin-team', 'admin-tarifs': 'admin-settings',
+  'admin-equipe': 'admin-team', 'admin-tarifs': 'admin-settings', conciergeries: 'concierge', logements: 'logements',
 };
-const PUBLIC = new Set(['home', 'login', 'signup', 'signup-pro', 'forgot', 'reset', 'book']);
+const PUBLIC = new Set(['home', 'login', 'signup', 'signup-pro', 'forgot', 'reset', 'book', 'concierge']);
 const ROLE_ONLY = {
   'pro-open': 'provider', 'pro-list': 'provider', 'pro-earnings': 'provider',
   admin: 'admin', 'admin-missions': 'admin', 'admin-team': 'admin', 'admin-settings': 'admin',
 };
 const NAV = {
-  client: [['reserver', 'Réserver', 'plus'], ['reservations', 'Réservations', 'calendar'], ['profil', 'Profil', 'user']],
+  client: [['reserver', 'Réserver', 'plus'], ['reservations', 'Réservations', 'calendar'], ['logements', 'Logements', 'home'], ['profil', 'Profil', 'user']],
   provider: [['missions', 'Missions', 'inbox'], ['planning', 'Planning', 'calendar'], ['gains', 'Gains', 'wallet'], ['profil', 'Profil', 'user']],
   admin: [['admin', 'Aperçu', 'chart'], ['admin-missions', 'Missions', 'inbox'], ['admin-equipe', 'Équipe', 'users'],
     ['admin-tarifs', 'Tarifs', 'sliders'], ['profil', 'Profil', 'user']],
@@ -2408,6 +2541,7 @@ function newBooking() {
   return {
     step: 0, service: 'car', formula: 'exterior', surface: 70, size: 'city', options: [], car_model: '',
     day: null, time: null, address: '', postal_code: '', city: '', contact_name: '', contact_phone: '', notes: '',
+    pay: 'now', promo: null, promoInput: '',
   };
 }
 function ensureBooking() {
@@ -2439,7 +2573,9 @@ function scheduledIso(b) {
   return new Date(y, m - 1, dd, hh, mm, 0, 0).toISOString();
 }
 function bookingQuote(b, withDate) {
-  return P.quote(b.service, b.formula, detailsOf(b), withDate ? scheduledIso(b) : null, S.settings);
+  const q = P.quote(b.service, b.formula, detailsOf(b), withDate ? scheduledIso(b) : null, S.settings);
+  const off = P.discount(q.price, b.promo);
+  return off ? Object.assign({}, q, { before: q.price, discount: off, price: q.price - off }) : q;
 }
 function fromPrice(service) {
   const def = P.SERVICES[service];
@@ -2600,7 +2736,7 @@ VIEWS.home = {
       <section class="hero">
         <div class="hero-copy">
           ${promoOn() ? html`<p class="promo-pill">${icon('star')}${PROMO.label} : −${PROMO.pct} % sur tout, jusqu’au ${PROMO.untilLabel}</p>`
-            : html`<p class="pick-kicker">${icon('check')}Prix affiché · Vous payez après le ménage</p>`}
+            : html`<p class="pick-kicker">${icon('check')}Prix affiché · Payez avant ou après le ménage</p>`}
           <h1 class="pick-title">On nettoie quoi pour vous&nbsp;?</h1>
           <p class="pick-lead">Touchez votre choix, voyez le prix tout de suite, réservez en une minute.</p>
           <div class="pick-grid">
@@ -2611,9 +2747,9 @@ VIEWS.home = {
               <span class="pick-go">Voir les prix${icon('next')}</span>
             </button>`)}
           </div>
-          <a class="pick-wide" href="${waLink('Bonjour Proova, je gère des locations de vacances et je cherche un ménage de fin de séjour entre deux locataires.')}" target="_blank" rel="noopener">
-            ${icon('home')}<span><strong>Location de vacances, conciergerie&nbsp;?</strong>
-              <small>Ménage de fin de séjour entre deux locataires. Écrivez-nous.</small></span>${icon('next', 'ic-next')}
+          <a class="pick-wide" href="#conciergeries">
+            ${icon('home')}<span><strong>Conciergerie, location de vacances&nbsp;?</strong>
+              <small>Votre espace : vos logements enregistrés, chaque fin de séjour réservée en deux gestes.</small></span>${icon('next', 'ic-next')}
           </a>
           <ul class="pick-trust">
             <li>${icon('shield')}Pros vérifiés</li>
@@ -2633,8 +2769,8 @@ VIEWS.home = {
             <p>Surface, formule, options : le prix se met à jour à chaque réglage. C’est celui que vous paierez.</p></div></li>
           <li><span class="step-n">2</span><div><h3>Un pro accepte la mission</h3>
             <p>Les prestataires validés de votre région reçoivent la demande. Vous êtes prévenu dès qu’un pro la prend.</p></div></li>
-          <li><span class="step-n">3</span><div><h3>Payez après, puis notez</h3>
-            <p>Vous suivez son arrivée, échangez par message, et réglez une fois la mission terminée.</p></div></li>
+          <li><span class="step-n">3</span><div><h3>Payez avant ou après, puis notez</h3>
+            <p>Par carte à la réservation, ou une fois la mission terminée : vous choisissez. Vous suivez son arrivée et échangez par message.</p></div></li>
         </ol>
       </section>
 
@@ -2685,7 +2821,9 @@ VIEWS.home = {
       <section class="band faq" id="faq" aria-labelledby="faq-t">
         <h2 id="faq-t">Questions fréquentes</h2>
         <details><summary>Comment se passe le paiement ?</summary>
-          <p>Rien n’est débité à la réservation. Une fois la mission terminée, vous recevez la facture et payez par carte bancaire, virement ou TWINT.</p></details>
+          <p>Vous choisissez : payer par carte au moment de réserver (remboursé si vous annulez), ou après la mission. Le paiement passe par Stripe, une page sécurisée.</p></details>
+        <details><summary>J’ai un code promo, je le mets où ?</summary>
+          <p>À la dernière étape de la réservation, dans « Code promo ». La réduction s’affiche tout de suite dans le prix.</p></details>
         <details><summary>Et si je dois annuler ?</summary>
           <p>L’annulation est gratuite tant que le pro n’est pas en route, directement depuis votre espace.</p></details>
         <details><summary>Qui sont les prestataires ?</summary>
@@ -2711,6 +2849,121 @@ VIEWS.home = {
 ACTIONS.scroll = (el) => {
   const t = document.getElementById(el.dataset.target);
   if (t) t.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+};
+
+// ---------------------------------------------------------------- espace conciergerie
+const CZ_SIZES = [[30, 'Studio'], [45, '2 pièces'], [65, '3 pièces'], [90, '4 pièces'], [130, 'Grand chalet']];
+VIEWS.concierge = {
+  layout: 'public',
+  title: () => 'Conciergeries et locations de vacances',
+  render() {
+    if (!S.country && !S.session) return countryGate();
+    const s = S.settings;
+    return html`${demoBar()}
+    <header class="site-top">
+      <a href="#accueil" class="logo-link" aria-label="Accueil Proova">${logo()}</a>
+      <div class="site-cta">${S.session ? html`<a class="btn" href="#logements">Mes logements</a>` : html`<a class="btn btn-ghost" href="#connexion">Se connecter</a>`}</div>
+    </header>
+    <main id="main">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="pick-kicker">${icon('home')}Conciergeries · Locations de vacances · Gîtes</p>
+          <h1 class="pick-title">Vos ménages de fin de séjour, en deux gestes</h1>
+          <p class="pick-lead">Enregistrez vos logements une seule fois. À chaque départ, touchez « Réserver » et choisissez l’heure : le logement est prêt pour les suivants.</p>
+          <div class="cz-cta">
+            <button type="button" class="btn btn-primary btn-lg" data-act="cz-start">Créer mon espace conciergerie</button>
+            <a class="btn btn-ghost btn-lg" href="${waLink('Bonjour Proova, je gère des locations de vacances et je voudrais parler des ménages de fin de séjour.')}" target="_blank" rel="noopener">${icon('chat')}En parler sur WhatsApp</a>
+          </div>
+        </div>
+      </section>
+      <section class="band" aria-labelledby="cz-prix">
+        <h2 id="cz-prix">Prix fixe par logement</h2>
+        <p class="muted">Fin de séjour : cuisine, salle de bain, sols, lits refaits, poubelles. Produits inclus.</p>
+        <dl class="money cz-prices">${CZ_SIZES.map(([m2, label]) => html`<div><dt>${label}, ${m2} m²</dt>
+          <dd>${fmtMoney(P.quote('home', 'turnover', { surface: m2 }, null, s).price)}</dd></div>`)}</dl>
+        <p class="muted small">En option : vitres, four, frigo, balcon, repassage. Supplément de ${pct(s.urgent_surcharge)} si le ménage est demandé moins de 24 h avant.</p>
+      </section>
+      <section class="band steps" aria-labelledby="cz-how">
+        <h2 id="cz-how">Comment ça marche</h2>
+        <ol class="step-list">
+          <li><span class="step-n">1</span><div><h3>Ajoutez vos logements</h3>
+            <p>Nom, adresse, surface, et l’accès : boîte à clés, code, linge. Une seule fois.</p></div></li>
+          <li><span class="step-n">2</span><div><h3>Réservez chaque rotation</h3>
+            <p>Un bouton par logement. Vous choisissez seulement le jour et l’heure.</p></div></li>
+          <li><span class="step-n">3</span><div><h3>Payez avant ou après</h3>
+            <p>Par carte, à la réservation ou une fois le ménage fait. Annulation gratuite tant que le pro n’est pas en route.</p></div></li>
+        </ol>
+      </section>
+    </main>
+    <footer class="site-foot">${logo()}<p>${areaText(s)}</p><p class="muted">© ${new Date().getFullYear()} Proova</p></footer>`;
+  },
+};
+ACTIONS['cz-start'] = () => {
+  if (S.session) { go('logements'); return; }
+  S.afterLogin = '#logements';
+  go('inscription');
+};
+
+VIEWS.logements = {
+  title: () => 'Mes logements',
+  async load() { S.profile = await S.api.getProfile(); return {}; },
+  render() {
+    const p = S.profile || {};
+    const list = Array.isArray(p.logements) ? p.logements : [];
+    return html`<div class="page-head"><h1>Mes logements</h1>
+        <p class="muted">Conciergeries et locations : enregistrez vos logements, puis réservez chaque ménage de fin de séjour en deux gestes.</p></div>
+      ${list.length ? html`<div class="lg-list">${list.map((l, i) => html`<article class="panel">
+          <div class="lg-head"><span class="svc-ic">${icon('home')}</span>
+            <div><strong>${l.name}</strong><small>${l.address}, ${l.postal_code ? `${l.postal_code} ` : ''}${l.city} · ${l.surface} m²</small></div>
+            <button type="button" class="btn btn-sm btn-ghost btn-danger btn-trash" data-act="lg-del" data-i="${i}" aria-label="Supprimer ${l.name}">${icon('trash')}</button></div>
+          ${l.notes ? html`<p class="muted small">${l.notes}</p>` : ''}
+          <button type="button" class="btn btn-primary btn-block" data-act="lg-book" data-i="${i}">Réserver le ménage · ${fmtMoney(P.quote('home', 'turnover', { surface: l.surface }, null, S.settings).price)}</button>
+        </article>`)}</div>`
+        : html`<p class="muted">Aucun logement pour l’instant. Ajoutez le premier ci-dessous.</p>`}
+      <form data-form="logement" class="panel form">
+        <h2 class="panel-title">Ajouter un logement</h2>
+        <label class="field"><span>Nom du logement</span><input name="name" required maxlength="60" placeholder="Chalet des Sapins, appartement 12…"></label>
+        <label class="field"><span>Rue et numéro</span><input name="address" required minlength="3" maxlength="160" autocomplete="street-address"></label>
+        <div class="grid-2 grid-npa">
+          <label class="field"><span>${S.country === 'CH' ? 'NPA' : 'Code postal'}</span><input name="postal_code" maxlength="10" inputmode="numeric"></label>
+          <label class="field"><span>Ville</span><input name="city" required minlength="2" maxlength="80" value="${p.city || ''}"></label>
+        </div>
+        <label class="field"><span>Surface (m²)</span><input name="surface" type="number" min="15" max="300" step="1" required value="50" inputmode="numeric"></label>
+        <label class="field"><span>Accès et consignes <em>(facultatif)</em></span>
+          <textarea name="notes" rows="2" maxlength="400" placeholder="Boîte à clés et code, où est le linge, nombre de lits…"></textarea></label>
+        <button class="btn btn-primary" type="submit">Enregistrer le logement</button>
+      </form>`;
+  },
+};
+FORMS.logement = async (form, btn) => {
+  const f = formData(form);
+  const list = ((S.profile && S.profile.logements) || []).slice();
+  if (list.length >= 60) { toast('60 logements maximum', 'bad'); return; }
+  list.push({
+    name: f.name.slice(0, 60), address: f.address.slice(0, 160), postal_code: (f.postal_code || '').slice(0, 10),
+    city: f.city.slice(0, 80), surface: Math.min(Math.max(Math.round(Number(f.surface) || 50), 15), 300), notes: (f.notes || '').slice(0, 400),
+  });
+  S.profile = await run(btn, () => S.api.updateProfile({ logements: list }), 'Logement enregistré');
+  refresh();
+};
+ACTIONS['lg-del'] = async (btn) => {
+  const list = ((S.profile && S.profile.logements) || []).filter((x, i) => i !== Number(btn.dataset.i));
+  S.profile = await run(btn, () => S.api.updateProfile({ logements: list }), 'Logement supprimé');
+  refresh();
+};
+ACTIONS['lg-book'] = (btn) => {
+  const l = ((S.profile && S.profile.logements) || [])[Number(btn.dataset.i)];
+  if (!l) return;
+  const b = newBooking();
+  setService(b, 'home');
+  Object.assign(b, {
+    formula: 'turnover', surface: l.surface, address: l.address, postal_code: l.postal_code || '', city: l.city,
+    notes: [l.name, l.notes].filter(Boolean).join(' : ').slice(0, 900), step: 2,
+    contact_name: S.profile.full_name || '', contact_phone: S.profile.phone || '',
+  });
+  S.booking = b;
+  saveDraft();
+  go('reserver');
 };
 
 // ---------------------------------------------------------------- connexion & inscription
@@ -3269,13 +3522,22 @@ const slotUrgent = (day, time) => slotTime(day, time) < Date.now() + 24 * 3600e3
 VIEWS.book = {
   get layout() { return S.session ? 'app' : 'plain'; },
   title: () => 'Réserver',
-  load() {
+  async load() {
     const b = ensureBooking();
     const p = S.profile || {};
     if (!b.contact_name) b.contact_name = p.full_name || '';
     if (!b.contact_phone) b.contact_phone = p.phone || '';
     if (!b.city) b.city = p.city || '';
     if (b.day && b.time && !slotOpen(b.day, b.time)) { b.time = null; if (b.step > 2) b.step = 2; }
+    // lien ?code=XXX : la réduction s'applique toute seule
+    if (S.promoCode && !b.promo && b.promoAuto !== S.promoCode) {
+      b.promoAuto = S.promoCode;
+      try {
+        const pc = await S.api.checkPromo(S.promoCode);
+        if (pc) { b.promo = { code: pc.code, kind: pc.kind, value: Number(pc.value) }; b.promoInput = pc.code; }
+      } catch (e) { /* code ignoré */ }
+      saveDraft();
+    }
     return {};
   },
   render() {
@@ -3287,6 +3549,7 @@ VIEWS.book = {
           ${BOOK_STEPS.map((l, i) => html`<li class="${i < step ? 'is-done' : i === step ? 'is-on' : ''}" ${i === step ? raw('aria-current="step"') : ''}>
             ${i < step ? html`<button type="button" data-act="b-step" data-v="${i}"><span>${l}</span></button>` : html`<span>${l}</span>`}</li>`)}
         </ol>
+        ${b.promo ? html`<p class="promo-ok">${icon('check')}Code ${b.promo.code} appliqué : −${fmtMoney(bookingQuote(b, true).discount || 0)}</p>` : ''}
       </div>
       <div class="book-grid">
         <section class="book-step" aria-label="${BOOK_STEPS[step]}">
@@ -3295,7 +3558,7 @@ VIEWS.book = {
             ${step > 0 ? html`<button type="button" class="btn btn-ghost" data-act="b-back">${icon('back')}Retour</button>` : html`<span></span>`}
             <div class="book-foot-price"><small>Total</small><strong id="b-price-mini">${fmtMoney(bookingQuote(b, true).price)}</strong></div>
             ${step < 4 ? html`<button type="button" class="btn btn-primary" data-act="b-next">Continuer${icon('next')}</button>`
-              : html`<button type="button" class="btn btn-primary" data-act="b-confirm">Confirmer la réservation</button>`}
+              : html`<button type="button" class="btn btn-primary" data-act="b-confirm">${b.pay === 'after' ? 'Confirmer la réservation' : 'Confirmer et payer'}</button>`}
           </div>
         </section>
         <aside class="book-summary" id="b-summary">${bookingSummary(b)}</aside>
@@ -3323,6 +3586,7 @@ function bookingSummary(b) {
       <span class="stub-label">${promoOn() ? PROMO.label : 'Prix fixe'}</span>
       ${bookingRegular(b, true) ? html`<span class="was-line">${wasTag(bookingRegular(b, true))}</span>` : ''}
       <strong class="price">${fmtMoney(q.price)}</strong>
+      ${q.discount ? html`<span class="stub-sub promo-line">Code ${b.promo.code} : −${fmtMoney(q.discount)}</span>` : ''}
       <span class="stub-sub">Environ ${fmtHours(q.hours)} de travail${q.urgent ? html`, supplément urgence de ${pct(S.settings.urgent_surcharge)} inclus` : ''}</span>
     </div>
   </div>`;
@@ -3435,6 +3699,8 @@ function stepAddress(b) {
 
 function stepConfirm(b) {
   const q = bookingQuote(b, true);
+  const now = b.pay !== 'after';
+  const promoVal = b.promo ? b.promo.code : (b.promoInput || '');
   return html`<h2 class="step-title">Tout est juste ?</h2>
     <dl class="recap">
       <div><dt>Service</dt><dd>${P.SERVICES[b.service].formulas[b.formula].label}, ${P.SERVICES[b.service].label.toLowerCase()}</dd></div>
@@ -3445,10 +3711,25 @@ function stepConfirm(b) {
       <div><dt>Adresse</dt><dd>${b.address}, ${b.postal_code} ${b.city}</dd></div>
       <div><dt>Contact</dt><dd>${b.contact_name ? b.contact_name + ', ' : ''}${b.contact_phone}</dd></div>
       ${b.notes ? html`<div><dt>Infos</dt><dd>${b.notes}</dd></div>` : ''}
+      ${q.discount ? html`<div><dt>Code promo</dt><dd>${b.promo.code} : −${fmtMoney(q.discount)}</dd></div>` : ''}
+      <div><dt>Total</dt><dd><strong>${fmtMoney(q.price)}</strong></dd></div>
     </dl>
+    <div class="promo-box">
+      <label class="field"><span>Code promo <em>(facultatif)</em></span>
+        <span class="promo-row"><input data-input="b-promo" value="${promoVal}" placeholder="Votre code" maxlength="20" autocomplete="off" autocapitalize="characters" ${b.promo ? raw('readonly') : ''}>
+          ${b.promo ? html`<button type="button" class="btn btn-ghost" data-act="b-promo-off">Retirer</button>`
+            : html`<button type="button" class="btn" data-act="b-promo">Appliquer</button>`}</span></label>
+    </div>
+    <h2 class="step-title">Quand voulez-vous payer ?</h2>
+    <div class="radio-list" role="radiogroup" aria-label="Moment du paiement">
+      <button type="button" role="radio" aria-checked="${String(now)}" class="radio-row ${now ? 'is-on' : ''}" data-act="b-pay" data-v="now">
+        <span class="radio-dot"></span><span class="radio-txt"><strong>Maintenant, par carte</strong><small>Paiement sécurisé. Remboursé si vous annulez.</small></span></button>
+      <button type="button" role="radio" aria-checked="${String(!now)}" class="radio-row ${now ? '' : 'is-on'}" data-act="b-pay" data-v="after">
+        <span class="radio-dot"></span><span class="radio-txt"><strong>Après le ménage</strong><small>Vous payez par carte une fois la mission terminée.</small></span></button>
+    </div>
     <ul class="reassure">
-      <li>${icon('wallet')}Rien à payer maintenant. Facture après la prestation.</li>
-      <li>${icon('x')}Annulation gratuite tant que le pro n’est pas en route.</li>
+      <li>${icon('wallet')}${now ? 'Après « Confirmer et payer », vous arrivez sur la page de paiement sécurisée.' : 'Rien à payer maintenant. Facture après la prestation.'}</li>
+      <li>${icon('x')}Annulation gratuite tant que le pro n’est pas en route${now ? ', remboursement automatique' : ''}.</li>
     </ul>
     ${!S.session ? html`<p class="note">Vous allez créer un compte (30 secondes) pour confirmer. Votre réservation est gardée.</p>
       <a class="btn btn-ghost btn-block wa-book" href="${waLink(bookingWaText(b, q))}" target="_blank" rel="noopener">${icon('chat')}Ou réserver sans compte, sur WhatsApp</a>` : ''}`;
@@ -3463,7 +3744,8 @@ function bookingWaText(b, q) {
     `• Adresse : ${b.address}, ${b.postal_code} ${b.city}`,
     `• Contact : ${b.contact_name ? b.contact_name + ', ' : ''}${b.contact_phone}`,
     b.notes ? `• Infos : ${b.notes}` : '',
-    `• Prix affiché : ${fmtMoney(q.price)}`,
+    `• Prix affiché : ${fmtMoney(q.price)}${q.discount ? ` (code ${b.promo.code}, −${fmtMoney(q.discount)})` : ''}`,
+    `• Paiement : ${b.pay === 'after' ? 'après la prestation' : 'maintenant, par carte (envoyez-moi le lien)'}`,
     S.ref ? `• Code : ${S.ref}` : '',
   ].filter(Boolean).join('\n');
 }
@@ -3480,6 +3762,29 @@ ACTIONS['b-day'] = (el) => {
   saveDraft(); refresh();
 };
 ACTIONS['b-time'] = (el) => { ensureBooking().time = el.dataset.v; saveDraft(); refresh(); };
+ACTIONS['b-pay'] = (el) => { ensureBooking().pay = el.dataset.v === 'after' ? 'after' : 'now'; saveDraft(); refresh(); };
+INPUTS['b-promo'] = (el) => { ensureBooking().promoInput = el.value.toUpperCase(); saveDraft(); };
+ACTIONS['b-promo'] = async (btn) => {
+  const b = ensureBooking();
+  const inp = $('[data-input="b-promo"]');
+  const code = ((inp && inp.value) || '').trim().toUpperCase();
+  if (!code) { toast('Écrivez votre code promo.', 'bad'); return; }
+  let pc;
+  try { pc = await run(btn, () => S.api.checkPromo(code)); } catch (e) { return; }
+  if (!pc) { toast('Ce code n’existe pas ou n’est plus valable.', 'bad'); return; }
+  b.promo = { code: pc.code, kind: pc.kind, value: Number(pc.value) };
+  b.promoInput = pc.code;
+  saveDraft();
+  toast(`Code ${pc.code} appliqué`, 'ok');
+  refresh();
+};
+ACTIONS['b-promo-off'] = () => {
+  const b = ensureBooking();
+  b.promo = null; b.promoInput = '';
+  forgetPromoParam();
+  saveDraft();
+  refresh();
+};
 CHANGES['b-opt'] = (el) => {
   const b = ensureBooking();
   b.options = el.checked ? [...new Set(b.options.concat(el.value))] : b.options.filter((o) => o !== el.value);
@@ -3544,14 +3849,29 @@ ACTIONS['b-confirm'] = async (btn) => {
   const b = ensureBooking();
   if (!S.session) { S.afterLogin = '#reserver'; saveDraft(); go('inscription'); return; }
   if (!slotOpen(b.day, b.time)) { b.step = 2; toast('Ce créneau vient de passer, choisissez-en un autre.', 'bad'); refresh(); return; }
+  const payNow = b.pay !== 'after';
   const m = await run(btn, () => S.api.createMission({
     service: b.service, formula: b.formula, details: detailsOf(b), scheduled_at: scheduledIso(b),
     address: b.address.trim(), postal_code: b.postal_code.trim(), city: b.city.trim(),
     contact_name: b.contact_name.trim(), contact_phone: b.contact_phone.trim(), notes: bookingNotes(b),
     currency: S.country ? COUNTRY_CUR[S.country] : undefined,
+    promo_code: b.promo ? b.promo.code : undefined,
   }));
   S.booking = null;
   clearDraft();
+  if (b.promo) forgetPromoParam();
+  if (payNow) {
+    setBusy(btn, true);
+    try {
+      const r = await S.api.startCheckout(m.id);
+      if (r && r.url) { location.href = r.url; return; }
+      toast(r && r.paid ? 'Réservation payée, merci !' : 'Réservation envoyée', 'ok');
+    } catch (e) {
+      toast('Réservation enregistrée. Le paiement par carte n’a pas marché : réessayez depuis la réservation.', 'bad');
+    }
+    go('m-' + m.id);
+    return;
+  }
   toast('Réservation envoyée aux pros de votre région', 'ok');
   go('m-' + m.id);
 };
@@ -3642,7 +3962,7 @@ VIEWS.mission = {
           ${isPro && !isAdmin ? html`<span class="stub-label">Vous touchez</span><strong class="price">${fmtMoney(earnings(m), m.currency)}</strong>
               <span class="stub-sub">sur ${fmtMoney(m.price, m.currency)} payés par le client</span>`
             : html`<span class="stub-label">Prix fixe</span><strong class="price">${fmtMoney(m.price, m.currency)}</strong>
-              <span class="stub-sub">${m.payment_status === 'paid' ? 'Payée, merci' : m.status === 'cancelled' ? 'Rien à payer' : 'Facture après la prestation'}</span>`}
+              <span class="stub-sub">${payNote(m)}</span>`}
           <span class="mref">Réf. ${m.ref}</span>
         </div>
       </div>
@@ -3654,6 +3974,7 @@ VIEWS.mission = {
           <dl class="info">
             <div>${icon('calendar')}<dt>Date</dt><dd>${cap(fmtDayLong(m.scheduled_at))} à ${fmtTime(m.scheduled_at)}</dd></div>
             <div>${icon('clock')}<dt>Durée estimée</dt><dd>${fmtHours(m.duration_hours)}</dd></div>
+            ${Number(m.discount) > 0 ? html`<div>${icon('star')}<dt>Code promo</dt><dd>${m.promo_code} : −${fmtMoney(m.discount, m.currency)}</dd></div>` : ''}
             <div>${icon('pin')}<dt>Adresse</dt><dd>${m.address}<br>${m.postal_code} ${m.city}
               <br><a class="link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${m.address}, ${m.postal_code} ${m.city}`)}" target="_blank" rel="noopener">Ouvrir dans Maps</a></dd></div>
             ${m.notes ? html`<div>${icon('chat')}<dt>Infos pour le pro</dt><dd>${m.notes}</dd></div>` : ''}
@@ -3674,8 +3995,34 @@ VIEWS.mission = {
     const t = $('#thread');
     if (t && !isRefresh) t.scrollTop = t.scrollHeight;
     every(6000, pollMission);
+    if (!isRefresh) checkReturnPayment();
   },
 };
+
+function payNote(m) {
+  if (m.payment_status === 'refunded') return 'Remboursée';
+  if (m.payment_status === 'paid') return m.status === 'cancelled' ? 'Remboursement en cours' : 'Payée, merci';
+  if (m.status === 'cancelled') return 'Rien à payer';
+  return m.status === 'done' ? 'À régler par carte' : 'À payer maintenant ou après';
+}
+function payStatus(m) {
+  if (m.payment_status === 'refunded') return 'Remboursée';
+  if (m.payment_status === 'paid') return `${m.stripe_session_id ? 'Payée par carte' : 'Payée'}${m.paid_at ? ` le ${fmtDay(m.paid_at)}` : ''}`;
+  return m.status === 'cancelled' ? 'Rien à payer' : 'Pas encore payée';
+}
+// Retour de la page de paiement Stripe : on demande au serveur si c'est payé
+async function checkReturnPayment() {
+  const back = /[?&]paiement=ok/.test(location.search);
+  if (back) try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) { /* rien */ }
+  const v = V();
+  const m = v && v.m;
+  if (!m || m.payment_status !== 'unpaid' || !m.stripe_session_id || role() === 'provider') return;
+  try {
+    const r = await S.api.verifyPayment(m.id);
+    if (r && r.paid) { toast('Paiement reçu, merci !', 'ok'); refresh(); }
+    else if (back) toast('Paiement pas encore confirmé. Il peut prendre une minute.', 'bad');
+  } catch (e) { /* on réessaiera à la prochaine visite */ }
+}
 
 function timeline(m) {
   const at = { pending: m.created_at, accepted: m.accepted_at, on_the_way: null, in_progress: m.started_at, done: m.completed_at };
@@ -3708,16 +4055,21 @@ function clientMissionPanel(m, pro) {
     accepted: 'Votre pro est réservé. Il vous écrit ici s’il a besoin d’une précision.',
     on_the_way: 'Votre pro est en route.',
     in_progress: 'La mission est en cours.',
-    done: 'Mission terminée. Vous pouvez la régler par carte ci-dessous.',
+    done: m.payment_status === 'unpaid' ? 'Mission terminée. Vous pouvez la régler par carte ci-dessous.' : 'Mission terminée. Merci !',
     cancelled: '',
   }[m.status];
+  const payable = m.payment_status === 'unpaid' && m.status !== 'cancelled' && Number(m.price) > 0;
   return html`<h2 class="panel-title">Votre pro</h2>
     ${personCard(pro, 'Prestataire', 'Nous cherchons un pro disponible pour ce créneau.')}
     ${msg ? html`<p class="muted">${msg}</p>` : ''}
-    ${m.status === 'done' ? html`<div class="pay-box">
-      <p><small>À régler</small><strong>${fmtMoney(m.price)}</strong></p>
-      <a class="btn btn-primary btn-block" href="${PAY_LINKS[m.currency] || payLink()}" target="_blank" rel="noopener">${icon('wallet')}Payer par carte</a>
-      <p class="muted small">Sur la page de paiement, indiquez ${fmtMoney(m.price)} et la référence ${m.ref}.</p></div>` : ''}
+    ${m.payment_status === 'paid' && m.status !== 'cancelled' ? html`<div class="pay-box">
+      <p><small>${icon('check')}Payée par carte</small><strong>${fmtMoney(m.price, m.currency)}</strong></p></div>` : ''}
+    ${m.payment_status === 'paid' && m.status === 'cancelled' ? html`<p class="muted">Remboursement en cours sur votre carte.</p>` : ''}
+    ${m.payment_status === 'refunded' ? html`<p class="muted">Remboursée sur votre carte (5 à 10 jours selon la banque).</p>` : ''}
+    ${payable ? html`<div class="pay-box">
+      <p><small>${m.status === 'done' ? 'À régler' : 'Payer maintenant ou après'}</small><strong>${fmtMoney(m.price, m.currency)}</strong></p>
+      <button type="button" class="btn btn-primary btn-block" data-act="m-checkout">${icon('wallet')}Payer par carte</button>
+      <p class="muted small">Paiement sécurisé par Stripe${m.status === 'done' ? '' : ', remboursé si vous annulez'}.</p></div>` : ''}
     ${canCancel ? html`<div class="actions"><button class="btn btn-ghost btn-danger" data-act="m-cancel">Annuler la réservation</button></div>` : ''}`;
 }
 
@@ -3746,7 +4098,9 @@ function adminMissionPanel(m, pro, client) {
   const share = earnings(m);
   return html`<h2 class="panel-title">Gestion</h2>
     <dl class="money">
-      <div><dt>Payé par le client</dt><dd>${fmtMoney(m.price, m.currency)}</dd></div>
+      <div><dt>Prix client</dt><dd>${fmtMoney(m.price, m.currency)}</dd></div>
+      ${Number(m.discount) > 0 ? html`<div><dt>Code ${m.promo_code}</dt><dd>−${fmtMoney(m.discount, m.currency)}</dd></div>` : ''}
+      <div><dt>Paiement</dt><dd>${payStatus(m)}</dd></div>
       <div><dt>Pour le prestataire</dt><dd>${fmtMoney(share, m.currency)}</dd></div>
       <div class="money-total"><dt>Commission Proova (${pct(m.commission_rate)})</dt><dd>${fmtMoney(Math.round((m.price - share) * 100) / 100, m.currency)}</dd></div>
     </dl>
@@ -3757,6 +4111,7 @@ function adminMissionPanel(m, pro, client) {
       ${m.provider_id ? proSteps(m).map((b) => raw(str(b).replace('btn-primary', ''))) : ''}
       ${m.status === 'done' ? html`<button class="btn btn-block ${m.payment_status === 'paid' ? '' : 'btn-primary'}" data-act="m-pay" data-v="${m.payment_status === 'paid' ? 'unpaid' : 'paid'}">
         ${icon(m.payment_status === 'paid' ? 'x' : 'check')}${m.payment_status === 'paid' ? 'Marquer comme non payée' : 'Marquer comme payée'}</button>` : ''}
+      ${m.status === 'cancelled' && m.payment_status === 'paid' ? html`<button class="btn btn-primary btn-block" data-act="m-refund">${icon('wallet')}Rembourser le client</button>` : ''}
       ${!['done', 'cancelled'].includes(m.status) ? html`<button class="btn btn-ghost btn-danger btn-block" data-act="m-cancel">Annuler la mission</button>` : ''}
       <button class="btn btn-ghost btn-danger btn-block" data-act="del-ask" data-kind="mission" data-id="${m.id}" data-label="la mission ${m.ref}">${icon('trash')}Supprimer la mission</button>
     </div>`;
@@ -3873,8 +4228,31 @@ ACTIONS['m-cancel'] = () => openSheet(html`<h2 id="sheet-title">Annuler cette ${
   </form>`);
 FORMS.cancel = async (form, btn) => {
   const f = formData(form);
-  await run(btn, () => S.api.cancelMission(V().m.id, f.reason), 'Réservation annulée');
+  const m = V().m;
+  await run(btn, () => S.api.cancelMission(m.id, f.reason), 'Réservation annulée');
   closeSheet();
+  if (m.payment_status === 'paid') {
+    try { await S.api.refundPayment(m.id); toast('Remboursement lancé : 5 à 10 jours sur la carte.', 'ok'); }
+    catch (e) { toast('Annulée. Le remboursement sera fait par l’équipe sous 48 h.', 'bad'); }
+  }
+  refresh();
+};
+ACTIONS['m-checkout'] = async (btn) => {
+  const m = V().m;
+  let r;
+  try { r = await run(btn, () => S.api.startCheckout(m.id)); } catch (e) { payFallback(m); return; }
+  if (r && r.url) { setBusy(btn, true); location.href = r.url; return; }
+  if (r && r.paid) toast('Paiement reçu, merci !', 'ok');
+  refresh();
+};
+function payFallback(m) {
+  openSheet(html`<h2 id="sheet-title">Payer avec le lien Stripe</h2>
+    <p>Sur la page de paiement, indiquez <strong>${fmtMoney(m.price, m.currency)}</strong> et la référence <strong>${m.ref}</strong>.</p>
+    <div class="sheet-actions"><button type="button" class="btn btn-ghost" data-act="close-sheet">Fermer</button>
+      <a class="btn btn-primary" href="${PAY_LINKS[m.currency] || payLink()}" target="_blank" rel="noopener">${icon('wallet')}Ouvrir le paiement</a></div>`);
+}
+ACTIONS['m-refund'] = async (btn) => {
+  await run(btn, () => S.api.refundPayment(V().m.id), 'Client remboursé');
   refresh();
 };
 ACTIONS['m-pay'] = async (btn) => {
@@ -4213,7 +4591,10 @@ function adminTable(list, byId) {
       <td data-l="Client">${m.contact_name || (byId[m.client_id] || {}).full_name || '—'}</td>
       <td data-l="Prestataire">${(byId[m.provider_id] || {}).full_name || html`<span class="muted">À attribuer</span>`}</td>
       <td data-l="Prix" class="num"><strong>${fmtMoney(m.price, m.currency)}</strong>
-        ${m.status === 'done' ? html`<small class="${m.payment_status === 'paid' ? 'ok' : 'warn'}">${m.payment_status === 'paid' ? 'Payée' : 'À encaisser'}</small>` : ''}</td>
+        ${m.status === 'cancelled' && m.payment_status === 'paid' ? html`<small class="warn">À rembourser</small>`
+          : m.payment_status === 'paid' ? html`<small class="ok">Payée</small>`
+          : m.payment_status === 'refunded' ? html`<small>Remboursée</small>`
+          : m.status === 'done' ? html`<small class="warn">À encaisser</small>` : ''}</td>
       <td data-l="Statut">${statusPill(m.status)}</td></tr>`)}</tbody></table>`;
 }
 ACTIONS['adm-filter'] = (el) => { S.adminFilter = el.dataset.v; refresh(); };
@@ -4296,7 +4677,12 @@ ACTIONS['del-do'] = async (btn) => {
 // ---------------------------------------------------------------- tarifs
 VIEWS['admin-settings'] = {
   title: () => 'Tarifs',
-  async load() { S.settings = await S.api.getSettings(); return {}; },
+  async load() {
+    S.settings = await S.api.getSettings();
+    let promos = [];
+    try { promos = await S.api.listPromos(); } catch (e) { /* table absente */ }
+    return { promos };
+  },
   render() {
     const s = S.settings;
     return html`<div class="page-head"><h1>Tarifs et réglages</h1><p class="muted">Les nouveaux prix s’appliquent aux prochaines réservations.</p></div>
@@ -4315,9 +4701,38 @@ VIEWS['admin-settings'] = {
           <button class="btn btn-primary" type="submit">Enregistrer les tarifs</button>
         </form>
         <section class="panel"><h2 class="panel-title">Aperçu des prix</h2><div id="set-preview">${settingsPreview(s)}</div></section>
-      </div>`;
+      </div>
+      ${promoPanel(V().promos || [])}`;
   },
 };
+function promoPanel(list) {
+  const site = location.origin + location.pathname;
+  return html`<section class="panel"><h2 class="panel-title">Codes promo</h2>
+    <p class="muted">Le client écrit le code à la fin de la réservation. Avec le lien du code, la réduction s’applique toute seule.</p>
+    ${list.length ? html`<ul class="promo-list">${list.map((c) => html`<li class="${c.active ? '' : 'is-off'}">
+      <div class="promo-txt"><strong>${c.code}</strong>
+        <small>−${c.kind === 'percent' ? `${Number(c.value)} %` : `${Number(c.value)} € ou CHF`} · utilisé ${c.uses}${c.max_uses ? ` sur ${c.max_uses}` : ''} fois${c.active ? '' : ' · en pause'}</small>
+        <small class="promo-link">${site}?code=${c.code}</small></div>
+      <button type="button" class="btn btn-sm" data-act="promo-toggle" data-code="${c.code}" data-v="${c.active ? '0' : '1'}">${c.active ? 'Pause' : 'Réactiver'}</button>
+      <button type="button" class="btn btn-sm btn-ghost btn-danger btn-trash" data-act="promo-del" data-code="${c.code}" aria-label="Supprimer le code ${c.code}">${icon('trash')}</button>
+    </li>`)}</ul>` : html`<p class="muted">Aucun code pour l’instant.</p>`}
+    <form data-form="promo" class="form">
+      <div class="grid-2">
+        <label class="field"><span>Nouveau code</span><input name="code" required minlength="3" maxlength="20" placeholder="BIENVENUE" autocomplete="off" autocapitalize="characters"></label>
+        <label class="field"><span>Réduction</span><span class="promo-row"><input name="value" type="number" min="1" max="1000" step="1" required placeholder="10">
+          <select name="kind"><option value="amount">€ / CHF</option><option value="percent">%</option></select></span></label>
+      </div>
+      <label class="field"><span>Nombre d’utilisations <em>(vide = sans limite)</em></span><input name="max_uses" type="number" min="1" step="1"></label>
+      <button class="btn btn-primary" type="submit">Créer le code</button>
+    </form></section>`;
+}
+FORMS.promo = async (form, btn) => {
+  const f = formData(form);
+  await run(btn, () => S.api.savePromo(f), `Code ${String(f.code).toUpperCase()} enregistré`);
+  refresh();
+};
+ACTIONS['promo-toggle'] = async (btn) => { await run(btn, () => S.api.setPromoActive(btn.dataset.code, btn.dataset.v === '1')); refresh(); };
+ACTIONS['promo-del'] = async (btn) => { await run(btn, () => S.api.deletePromo(btn.dataset.code), 'Code supprimé'); refresh(); };
 function settingsPreview(s) {
   const ex = [
     ['home', 'regular', { surface: 70 }, 'Entretien 70 m²'],
@@ -4487,6 +4902,7 @@ async function syncSession() {
 async function boot() {
   S.country = loadCountry();
   S.ref = loadRef();
+  S.promoCode = loadPromoParam();
   const root = $('#app');
   root.innerHTML = str(html`<div class="splash">${logo('logo-lg')}</div>`);
   const hashError = /error_description=([^&]+)/.exec(location.hash);
