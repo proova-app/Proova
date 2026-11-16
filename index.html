@@ -438,6 +438,16 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .legal code { font-size: 13px; overflow-wrap: anywhere; }
 .legal th:first-child, .legal td:first-child { width: 38%; }
 .legal ul + p { margin-top: 12px; }
+.promo-video { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 40px; align-items: center; }
+.promo-video video { display: block; width: 100%; aspect-ratio: 9 / 16; border-radius: 24px; background: #0f2741; box-shadow: 0 24px 48px -28px rgba(15, 39, 65, .55); }
+.promo-video h2 { margin-bottom: 10px; }
+.promo-video p { color: var(--ink-2); max-width: 40ch; }
+@media (max-width: 720px) {
+  .promo-video { grid-template-columns: 1fr; gap: 20px; text-align: center; }
+  .promo-video video { max-width: 280px; margin: 0 auto; }
+  .promo-video p { margin: 0 auto; }
+  .promo-video .vid-copy { order: -1; }
+}
 .legal-links { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; }
 .legal-links a { color: var(--ink-2); text-underline-offset: 3px; }
 .gate .legal-links { margin-top: 28px; justify-content: center; }
@@ -2883,6 +2893,18 @@ VIEWS.privacy = {
   },
 };
 
+// Vidéo de lancement (prix en euros : affichée seulement pour la France)
+function promoVideo() {
+  const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return html`<section class="band promo-video" aria-labelledby="video-t">
+    <video src="media/proova-lancement.mp4" poster="media/proova-lancement.jpg" muted loop playsinline controls preload="metadata"
+      ${still ? '' : 'autoplay'} aria-label="Vidéo : Proova arrive aux Rousses, prix et réservation en 1 minute"></video>
+    <div class="vid-copy">
+      <h2 id="video-t">Proova arrive aux Rousses</h2>
+      <p>Voiture, maison, fin de séjour : le prix est affiché, vous payez avant ou après. 15 secondes pour tout comprendre.</p>
+    </div>
+  </section>`;
+}
 VIEWS.home = {
   layout: 'public',
   title: () => 'Nettoyage voiture et maison au prix affiché',
@@ -2933,6 +2955,8 @@ VIEWS.home = {
         </div>
         ${quoteTicket()}
       </section>
+
+      ${S.country === 'FR' ? promoVideo() : ''}
 
       ${peopleBand()}
 
