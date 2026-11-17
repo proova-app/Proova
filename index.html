@@ -1087,6 +1087,18 @@ a.pick-tile { text-decoration: none; }
   .cd-wrap { width: 100%; justify-items: stretch; }
   .cd b { font-size: 22px; }
 }
+/* ============================================================ Lucia, ambassadrice recrutement */
+.lucia { display: flex; gap: 14px; align-items: flex-start; margin: 0 0 18px; }
+.lucia img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; flex: none; border: 3px solid var(--glove); background: var(--mist); }
+.lucia-bubble { position: relative; padding: 12px 14px; border-radius: 4px 16px 16px 16px; background: rgba(255, 255, 255, .1); color: #fff; font-size: 15px; line-height: 1.45; }
+.lucia-bubble strong { display: block; font-size: 13px; color: #ff8f8f; margin-bottom: 2px; }
+.lucia-light .lucia-bubble { background: var(--glove-soft); color: var(--ink); }
+.lucia-light .lucia-bubble strong { color: var(--glove-2); }
+.lucia-note { font-size: 12px; opacity: .65; margin-top: 10px; }
+.pros-cta { display: flex; flex-wrap: wrap; gap: 10px; }
+.pro-perks { list-style: none; padding: 0; margin: 4px 0 16px; display: grid; gap: 6px; font-weight: 600; font-size: 15px; }
+.pro-perks li { display: flex; gap: 8px; align-items: center; }
+.pro-perks .ic { color: var(--ok); width: 18px; height: 18px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
@@ -2498,7 +2510,7 @@ const isDemo = () => S.api && S.api.mode === 'demo';
 
 /* ============================================================ routes & coque */
 const ROUTES = {
-  accueil: 'home', connexion: 'login', inscription: 'signup', 'devenir-pro': 'signup-pro', oubli: 'forgot',
+  accueil: 'home', connexion: 'login', inscription: 'signup', 'devenir-pro': 'signup-pro', recrutement: 'signup-pro', oubli: 'forgot',
   'nouveau-mdp': 'reset', reserver: 'book', reservations: 'client-list', missions: 'pro-open', planning: 'pro-list',
   gains: 'pro-earnings', profil: 'profile', admin: 'admin', 'admin-missions': 'admin-missions',
   'admin-equipe': 'admin-team', 'admin-tarifs': 'admin-settings', conciergeries: 'concierge', pro: 'concierge', pros: 'concierge', devis: 'devis', 'devis-locaux': 'devis', logements: 'logements',
@@ -2903,6 +2915,12 @@ const PICS = {
 };
 const heroBg = (id) => `--hero-img: url(${IMG(id, 1600)})`;
 const cardPhoto = (id, alt) => html`<figure class="photo b2b-photo"><img src="${IMG(id, 700)}" alt="${alt}" loading="lazy" decoding="async"></figure>`;
+const RECRUIT_URL = 'https://proova-app.github.io/Proova/#recrutement';
+const RECRUIT_SHARE = `Proova recrute des personnes qui savent faire le ménage, avec ou sans matériel, en France et en Suisse : 25 € de l’heure minimum garanti. Inscription ici : ${RECRUIT_URL}`;
+function luciaSays(text, light) {
+  return html`<div class="lucia ${light ? 'lucia-light' : ''}"><img src="media/lucia.jpg" alt="Lucia, la mascotte de Proova" width="64" height="64">
+    <p class="lucia-bubble"><strong>Lucia, de Proova</strong>${text}</p></div>`;
+}
 const PRO_WA_MSG = 'Bonjour Proova, je suis un professionnel (conciergerie, agence, hôtel ou locaux) et je voudrais un devis pour du ménage.';
 const proPhone = () => (S.settings && S.settings.contact_phone) || EDITOR.phone;
 // Prix « dès » d'une formule précise (plus petite surface ou citadine)
@@ -3270,13 +3288,19 @@ VIEWS.home = {
 
       <section class="band pros" id="pros" aria-labelledby="pros-t">
         <div class="pros-copy">
-          <h2 id="pros-t">Vous faites du nettoyage ? Trouvez des clients sans démarcher.</h2>
+          ${luciaSays('Vous savez faire le ménage, avec ou sans matériel ? On recrute en France et en Suisse. Inscrivez-vous en 3 minutes, on vous rappelle.')}
+          <h2 id="pros-t">Vous faites du ménage&nbsp;? Rejoignez Proova.</h2>
           <ul class="pros-list">
+            <li>${icon('wallet')}25 € de l’heure minimum garanti</li>
             <li>${icon('inbox')}Vous choisissez vos missions, vos jours et votre zone</li>
-            <li>${icon('wallet')}Le prix est affiché avant d’accepter, vous touchez ${share} % du montant</li>
+            <li>${icon('check')}Avec ou sans matériel, diplômé ou expérimenté</li>
             <li>${icon('star')}Vos notes construisent votre réputation, mission après mission</li>
           </ul>
-          <a class="btn btn-primary" href="#devenir-pro">Devenir prestataire</a>
+          <div class="pros-cta">
+            <a class="btn btn-primary" href="#devenir-pro">Devenir prestataire</a>
+            <a class="btn btn-outline-light" href="https://wa.me/?text=${encodeURIComponent(RECRUIT_SHARE)}" target="_blank" rel="noopener">${icon('send')}Partager à un proche</a>
+          </div>
+          <p class="lucia-note">Lucia est un personnage créé par intelligence artificielle.</p>
         </div>
         <div class="pros-example ticket ticket-dark">
           <div class="ticket-body">
@@ -3691,8 +3715,14 @@ VIEWS['signup-pro'] = {
   title: () => 'Devenir prestataire',
   render() {
     return html`${previewNote()}<div class="auth-card auth-wide">
+      ${luciaSays('Bienvenue ! Remplissez ce formulaire, l’équipe Proova vous rappelle pour valider votre profil avant vos premières missions.', true)}
       <h1>Devenir prestataire</h1>
-      <p class="muted">Créez votre compte, choisissez vos services. L’équipe Proova valide votre profil avant vos premières missions.</p>
+      <ul class="pro-perks">
+        <li>${icon('check')}25 € de l’heure minimum garanti</li>
+        <li>${icon('check')}Avec ou sans matériel</li>
+        <li>${icon('check')}Vous choisissez vos jours et vos missions</li>
+        <li>${icon('check')}En France et en Suisse</li>
+      </ul>
       <form data-form="signup" class="form" novalidate>
         <input type="hidden" name="role" value="provider">
         <fieldset class="group"><legend>Vous</legend>
@@ -3701,7 +3731,7 @@ VIEWS['signup-pro'] = {
           ${field('phone', 'Téléphone', { type: 'tel', auto: 'tel', inputmode: 'tel', placeholder: '+41 79 123 45 67 ou 06 12 34 56 78' })}
         </fieldset>
         <fieldset class="group"><legend>Services proposés</legend>
-          <div class="check-grid">${liveServices().map(([k, s]) => html`<label class="check-tile">
+          <div class="check-grid">${liveServices(['office']).map(([k, s]) => html`<label class="check-tile">
             <input type="checkbox" name="services" value="${k}" data-group="1">${icon(SERVICE_ICON[k])}<span>${s.label}</span></label>`)}</div>
         </fieldset>
         ${applicationFields({})}
