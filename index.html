@@ -1060,6 +1060,33 @@ a.pick-tile { text-decoration: none; }
   .devis-page { padding: 12px 16px 48px; }
 }
 @media (max-width: 380px) { .devis-card .check-grid { grid-template-columns: 1fr; } }
+/* ============================================================ offre d'arrivée de l'hiver + décompte */
+.winter { background: linear-gradient(110deg, #0f2741 0%, #1d3f66 55%, #2e64a8 100%); color: #fff; position: relative; overflow: hidden; }
+.winter::after { content: '❄'; position: absolute; right: -14px; top: -34px; font-size: 150px; line-height: 1; opacity: .08; pointer-events: none; }
+.winter-in { max-width: 1200px; margin: 0 auto; padding: 18px 24px; display: flex; gap: 20px 32px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.winter-txt { display: grid; gap: 4px; max-width: 640px; }
+.winter-k { font-size: 13px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: #9fc3ee; }
+.winter-txt strong { font-size: clamp(20px, 2.6vw, 26px); font-weight: 800; letter-spacing: -0.02em; }
+.winter-txt strong .winter-pct { background: var(--glove); padding: 0 8px; border-radius: 8px; margin-right: 4px; }
+.winter-txt p { font-size: 14px; color: #d6e3f2; line-height: 1.45; }
+.cd-wrap { display: grid; gap: 6px; justify-items: start; }
+.cd-wrap small { font-size: 12px; font-weight: 700; color: #9fc3ee; text-transform: uppercase; letter-spacing: .04em; }
+.cd { display: flex; gap: 6px; }
+.cd span { display: grid; justify-items: center; min-width: 54px; padding: 6px 6px 5px; border-radius: 12px; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .2); }
+.cd b { font-size: 24px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.cd i { font-style: normal; font-size: 11px; color: #c9d9ec; font-weight: 600; }
+.cd-end { font-weight: 700; }
+.offer-card { display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 20px; padding: 18px 20px;
+  border-radius: var(--r-lg); background: linear-gradient(110deg, #0f2741, #2e64a8); color: #fff; }
+.offer-card p { color: #d6e3f2; font-size: 14px; max-width: 46ch; }
+.offer-card strong { display: block; font-size: 19px; margin-bottom: 2px; }
+.b2b .offer-line { margin-top: 18px; display: inline-flex; gap: 8px; align-items: center; padding: 8px 14px; border-radius: 999px; background: var(--glove); color: #fff; font-weight: 700; font-size: 14px; }
+@media (max-width: 860px) {
+  .winter-in { padding: 16px; }
+  .cd span { min-width: 0; flex: 1; }
+  .cd-wrap { width: 100%; justify-items: stretch; }
+  .cd b { font-size: 22px; }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
@@ -2291,7 +2318,51 @@ const liveServices = (keep) => Object.entries(P.SERVICES)
 
 // ---------------------------------------------------------------- promo de la semaine
 // S'affiche quand le tarif horaire (Réglages admin) est à 36,45 = 40,50 - 10 %, jusqu'à la date de fin.
-const PROMO = { label: 'Promo de la semaine', pct: 10, regularRate: 40.5, from: '2026-11-06T00:00:00', until: '2026-11-13T23:59:59', untilLabel: '13 novembre' };
+// S'affiche quand le tarif horaire (Réglages admin) est à 34,43 = 40,50 - 15 %, jusqu'à la date de fin. Remettre 40,50 ensuite.
+const PROMO = { label: 'Offre d’arrivée de l’hiver', pct: 15, regularRate: 40.5, from: '2026-11-17T00:00:00', until: '2026-11-23T23:59:59', untilLabel: 'dimanche 23 novembre' };
+
+// ---------------------------------------------------------------- geste commercial : offre d'arrivée de l'hiver, avec décompte
+// Pour les pros, la remise s'applique à la main sur le devis de toute demande envoyée avant la fin.
+const WINTER = { pct: 15, from: '2026-11-17T00:00:00', until: '2026-11-23T23:59:59', untilLabel: 'dimanche 23 novembre à minuit' };
+function winterOn() {
+  const now = Date.now();
+  return now >= new Date(WINTER.from).getTime() && now <= new Date(WINTER.until).getTime();
+}
+function countdownHtml(until) {
+  const ms = new Date(until).getTime() - Date.now();
+  if (ms <= 0) return '<span class="cd-end">Offre terminée</span>';
+  const t = Math.floor(ms / 1000);
+  const parts = [[Math.floor(t / 86400), 'jours'], [Math.floor((t % 86400) / 3600), 'heures'], [Math.floor((t % 3600) / 60), 'min'], [t % 60, 's']];
+  return parts.map(([v, l]) => `<span><b>${String(v).padStart(2, '0')}</b><i>${l}</i></span>`).join('');
+}
+const countdown = () => raw(`<div class="cd" data-until="${WINTER.until}" role="timer" aria-label="Temps restant avant la fin de l’offre">${countdownHtml(WINTER.until)}</div>`);
+setInterval(() => {
+  if (document.hidden) return;
+  document.querySelectorAll('[data-until]').forEach((el) => { el.innerHTML = countdownHtml(el.dataset.until); });
+}, 1000);
+function winterBanner() {
+  if (!winterOn()) return '';
+  const all = promoOn();
+  return html`<section class="winter" aria-label="Offre d’arrivée de l’hiver">
+    <div class="winter-in">
+      <div class="winter-txt">
+        <p class="winter-k">Offre d’arrivée de l’hiver · jusqu’au ${WINTER.untilLabel}</p>
+        <strong><span class="winter-pct">−${WINTER.pct}&nbsp;%</span>${all ? 'sur toutes nos prestations' : 'sur votre première prestation'}</strong>
+        <p>${all ? 'Les prix barrés sont nos prix habituels.' : 'Valable sur toute demande de devis envoyée avant la fin du décompte.'}
+          Ce n’est pas notre tarif normal&nbsp;: on le baisse exceptionnellement cette semaine pour lancer la saison d’hiver. Ensuite, retour aux prix habituels.</p>
+      </div>
+      <div class="cd-wrap"><small>Fin de l’offre dans</small>${countdown()}</div>
+    </div>
+  </section>`;
+}
+function winterOfferCard() {
+  if (!winterOn()) return '';
+  return html`<div class="offer-card">
+    <div><strong>−${WINTER.pct}&nbsp;% sur votre première prestation</strong>
+      <p>Offre d’arrivée de l’hiver, pour toute demande envoyée avant le ${WINTER.untilLabel}. Un geste exceptionnel, pas notre prix habituel.</p></div>
+    <div class="cd-wrap"><small>Il reste</small>${countdown()}</div>
+  </div>`;
+}
 function promoOn() {
   const now = Date.now();
   if (now < new Date(PROMO.from).getTime() || now > new Date(PROMO.until).getTime()) return false;
@@ -2915,6 +2986,7 @@ function b2bBand() {
   return html`<section class="band b2b" id="offre-pro" aria-labelledby="b2b-t">
     <p class="b2b-kicker">Conciergeries · Agences · Hôtels · Gîtes · Locaux</p>
     <h2 id="b2b-t">Professionnels : on prend vos ménages en charge</h2>
+    ${winterOn() ? html`<p class="offer-line">${icon('star')}−${WINTER.pct}&nbsp;% sur la première prestation, demande avant le ${WINTER.untilLabel}</p>` : ''}
     <p class="b2b-lead">Une équipe qualifiée qui s’adapte à vos rotations et à vos horaires, un devis gratuit adapté à vos besoins, et un seul contact pour tout organiser.</p>
     ${airbnbAlert()}
     ${b2bCards()}
@@ -3129,6 +3201,7 @@ VIEWS.home = {
           : html`<a class="btn btn-ghost" href="#connexion">Se connecter</a>`}
       </div>
     </header>
+    ${winterBanner()}
     <main id="main">
       <div class="hero-photo" style="${heroBg(PICS.hero)}">
       <section class="hero">
@@ -3331,6 +3404,7 @@ FORMS.devis = (form, btn) => {
     `• Pour quand : ${val('when')}`,
     val('city') ? `• Commune : ${val('city')}` : '',
     val('notes') ? `• Détails : ${val('notes')}` : '',
+    winterOn() ? `• Offre d’arrivée de l’hiver : −${WINTER.pct} % sur la première prestation (demande du ${new Date().toLocaleDateString('fr-FR')})` : '',
     `• Nom / société : ${val('name')}`,
     `• Téléphone : ${val('phone')}`,
     val('email') ? `• E-mail : ${val('email')}` : '',
@@ -3362,6 +3436,7 @@ VIEWS.devis = {
         <h1>${kind === 'locaux' ? 'Le ménage de vos locaux, sur devis' : 'Vos ménages de conciergerie, sur devis'}</h1>
         <p class="pick-lead">Notez vos besoins, on vous rappelle avec un prix clair. Jeune entreprise du Haut-Jura, équipe qualifiée, on s’adapte à vos disponibilités.</p>
       </div>
+      ${winterOfferCard()}
       ${devisForm(kind)}
     </main>
     <footer class="site-foot">${logo()}<p>${areaText(S.settings)}</p><p><a href="${telHref(proPhone())}">${proPhone()}</a></p><p class="muted">© ${new Date().getFullYear()} Proova</p>${legalLinks()}</footer>`;
@@ -3388,6 +3463,7 @@ VIEWS.concierge = {
         ${S.session ? html`<a class="btn" href="#logements">Mes logements</a>` : html`<a class="btn btn-ghost" href="#connexion">Se connecter</a>`}
       </div>
     </header>
+    ${winterBanner()}
     <main id="main">
       <div class="hero-photo" style="${heroBg(PICS.heroPro)}">
       <section class="hero">
@@ -3420,6 +3496,7 @@ VIEWS.concierge = {
       <section class="band devis-wrap" id="devis-form" aria-labelledby="devis-t" style="margin:0 auto">
         <h2 id="devis-t">Votre devis gratuit en une minute</h2>
         <p class="trust-lead">Cochez ce qu’il vous faut, on vous rappelle avec un prix clair. Sans engagement.</p>
+        ${winterOfferCard()}
         ${devisForm('cz')}
       </section>
 
