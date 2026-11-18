@@ -1024,6 +1024,18 @@ a.mini-main:hover strong { text-decoration: underline; text-underline-offset: 3p
   .pick-badge { top: 10px; right: 10px; font-size: 11px; padding: 2px 8px; }
 }
 @media (max-width: 560px) { .trust-grid { grid-template-columns: 1fr; } }
+/* « Selon votre cas » : les 3 promesses Proova */
+.case-grid { margin-top: 28px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.case-card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--r-lg); padding: 24px 22px; display: grid; gap: 10px; align-content: start; }
+.case-who { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; color: var(--glove); }
+.case-who .ic { width: 22px; height: 22px; }
+.case-card h3 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+.case-card ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; color: var(--ink-2); font-size: 15px; }
+.case-card li { display: flex; gap: 8px; align-items: flex-start; }
+.case-card li .ic { width: 18px; height: 18px; flex: none; margin-top: 2px; color: var(--ok); }
+.case-note { font-size: 13px; color: var(--muted); }
+.case-card .btn { margin-top: 6px; justify-self: start; }
+@media (max-width: 960px) { .case-grid { grid-template-columns: 1fr; } }
 /* ============================================================ v3 : photos, fond photo, devis */
 a.pick-tile { text-decoration: none; }
 .pick-tile .pick-free { font-size: 15px; font-weight: 700; color: var(--ok); }
@@ -2286,6 +2298,7 @@ function detailsLine(m) {
 
 // ---------------------------------------------------------------- icônes
 const ICONS = {
+  camera: '<path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3V19H4z"/><circle cx="12" cy="13.3" r="3.4"/>',
   home: '<path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>',
   office: '<path d="M4 20.5h16"/><path d="M6 20.5V4h8.5v16.5"/><path d="M14.5 9H18v11.5"/><path d="M9 7.5h2.5M9 11h2.5M9 14.5h2.5"/>',
   car: '<path d="M4 16.5V12l2-5h12l2 5v4.5z"/><path d="M4 12h16"/><circle cx="7.5" cy="16.5" r="1.6"/><circle cx="16.5" cy="16.5" r="1.6"/>',
@@ -2513,7 +2526,7 @@ const ROUTES = {
   accueil: 'home', connexion: 'login', inscription: 'signup', 'devenir-pro': 'signup-pro', recrutement: 'signup-pro', oubli: 'forgot',
   'nouveau-mdp': 'reset', reserver: 'book', reservations: 'client-list', missions: 'pro-open', planning: 'pro-list',
   gains: 'pro-earnings', profil: 'profile', admin: 'admin', 'admin-missions': 'admin-missions',
-  'admin-equipe': 'admin-team', 'admin-tarifs': 'admin-settings', conciergeries: 'concierge', pro: 'concierge', pros: 'concierge', devis: 'devis', 'devis-locaux': 'devis', logements: 'logements',
+  'admin-equipe': 'admin-team', 'admin-tarifs': 'admin-settings', conciergeries: 'concierge', pro: 'concierge', pros: 'concierge', devis: 'devis', 'devis-locaux': 'devis', 'devis-residence': 'devis', residence: 'devis', logements: 'logements',
   'mentions-legales': 'legal', confidentialite: 'privacy', cookies: 'privacy',
 };
 const PUBLIC = new Set(['home', 'login', 'signup', 'signup-pro', 'forgot', 'reset', 'book', 'concierge', 'devis', 'legal', 'privacy']);
@@ -2946,6 +2959,51 @@ function homeTiles() {
     </button>`)}
   </div>`;
 }
+// Bloc « Selon votre cas » : fin de séjour garantie, abonnement résidence secondaire, preuve en photos
+function caseBand(onHome) {
+  return html`<section class="band" id="selon-cas" aria-labelledby="case-t">
+    <h2 id="case-t">Selon votre cas, on a la bonne formule</h2>
+    <p class="trust-lead">Vous n’êtes pas sur place&nbsp;? C’est justement notre spécialité&nbsp;: on s’occupe de votre logement et vous voyez le résultat sur votre téléphone.</p>
+    <div class="case-grid">
+      <article class="case-card">
+        <p class="case-who">${icon('key')}Vous louez sur Airbnb ou gérez une conciergerie</p>
+        <h3>Prêt avant 16&nbsp;h, sinon c’est offert</h3>
+        <ul>
+          <li>${icon('check')}Ménage de fin de séjour entre deux voyageurs</li>
+          <li>${icon('check')}Lits refaits avec votre linge, poubelles sorties</li>
+          <li>${icon('check')}Réassort&nbsp;: café, papier toilette, savon, éponges</li>
+          <li>${icon('camera')}Photos du logement prêt envoyées sur WhatsApp</li>
+        </ul>
+        <p class="case-note">Garantie valable si les voyageurs quittent le logement avant 11&nbsp;h et que les clés sont accessibles.</p>
+        <a class="btn btn-primary" href="#devis">Mon devis gratuit</a>
+      </article>
+      <article class="case-card">
+        <p class="case-who">${icon('home')}Vous avez un chalet ou une résidence secondaire</p>
+        <h3>Abonnement «&nbsp;Chalet tranquille&nbsp;»</h3>
+        <ul>
+          <li>${icon('check')}Un passage par semaine ou par mois, quand vous n’êtes pas là</li>
+          <li>${icon('check')}On aère, on vérifie le chauffage et les fuites</li>
+          <li>${icon('check')}Ménage complet juste avant votre arrivée</li>
+          <li>${icon('camera')}Un compte rendu photo après chaque passage</li>
+        </ul>
+        <p class="case-note">Vous arrivez, tout est prêt. Un prix fixe par mois, sur devis gratuit.</p>
+        <a class="btn btn-primary" href="#devis-residence">Mon abonnement</a>
+      </article>
+      <article class="case-card">
+        <p class="case-who">${icon('camera')}Pour tous nos clients, sans exception</p>
+        <h3>La preuve en photos, à chaque passage</h3>
+        <ul>
+          <li>${icon('check')}Photos avant et après envoyées sur WhatsApp</li>
+          <li>${icon('check')}Vous voyez le résultat sans vous déplacer</li>
+          <li>${icon('check')}Un souci&nbsp;? On revient le corriger</li>
+          <li>${icon('wallet')}Et vous pouvez payer une fois le travail fait</li>
+        </ul>
+        <p class="case-note">Maison, voiture, locaux ou location de vacances&nbsp;: c’est inclus, sans supplément.</p>
+        ${onHome ? html`<button type="button" class="btn" data-act="scroll" data-target="main">Voir les prix</button>` : html`<a class="btn" href="#accueil">Voir les prix</a>`}
+      </article>
+    </div>
+  </section>`;
+}
 // Bloc « jeune entreprise, équipe qualifiée »
 function trustCards() {
   return html`<div class="trust-grid">
@@ -2955,8 +3013,8 @@ function trustCards() {
       <p>Vous proposez le créneau qui vous arrange, on s’organise selon les disponibilités de l’équipe, du lundi au samedi.</p></article>
     <article class="trust-card">${icon('wallet')}<h3>Devis gratuit, payé après</h3>
       <p>Pros : un devis gratuit adapté à vos besoins. Particuliers : le prix s’affiche avant de réserver. Et vous pouvez payer une fois le travail fait.</p></article>
-    <article class="trust-card">${icon('chat')}<h3>Un vrai interlocuteur</h3>
-      <p>Une jeune équipe joignable directement sur WhatsApp ou par téléphone, qui répond vite et s’adapte à vos demandes.</p></article>
+    <article class="trust-card">${icon('camera')}<h3>La preuve en photos</h3>
+      <p>À chaque passage, vous recevez les photos avant et après sur WhatsApp. Une jeune équipe joignable directement, qui répond vite.</p></article>
   </div>`;
 }
 function trustBand() {
@@ -2977,8 +3035,8 @@ function b2bCards() {
   return html`<div class="b2b-grid">
     <article class="b2b-card">${cardPhoto(PICS.chalet, 'Une chambre de chalet aux murs en bois, lit fait')}
       <h3>${icon('key')}Conciergeries et locations de vacances</h3>
-      <p>Ménage de fin de séjour entre deux voyageurs : cuisine, salle de bain, sols, lits refaits, poubelles.</p>
-      <p class="b2b-from">Devis gratuit</p></article>
+      <p>Ménage de fin de séjour entre deux voyageurs : cuisine, salle de bain, sols, lits refaits, poubelles, réassort. Photos envoyées sur WhatsApp.</p>
+      <p class="b2b-from">Prêt avant 16 h, sinon c’est offert · Devis gratuit</p></article>
     <article class="b2b-card">${cardPhoto(PICS.office, 'Des mains gantées nettoient un bureau')}
       <h3>${icon('office')}Bureaux, commerces et locaux</h3>
       <p>Entretien régulier ou grand nettoyage : postes de travail, sols, sanitaires, poubelles, vitres.</p>
@@ -3233,15 +3291,21 @@ VIEWS.home = {
             ${icon('key')}<span><strong>Conciergerie, agence, hôtel, gîte&nbsp;?</strong>
               <small>L’offre pro : devis gratuit, créneaux selon vos rotations, un seul contact.</small></span>${icon('next', 'ic-next')}
           </a>
+          <a class="pick-wide" href="#devis-residence">
+            ${icon('home')}<span><strong>Un chalet ou une résidence secondaire&nbsp;?</strong>
+              <small>Abonnement «&nbsp;Chalet tranquille&nbsp;» : on surveille, on nettoie, tout est prêt à votre arrivée.</small></span>${icon('next', 'ic-next')}
+          </a>
           <ul class="pick-trust">
             <li>${icon('medal')}Équipe qualifiée</li>
-            <li>${icon('check')}Produits inclus</li>
+            <li>${icon('camera')}Photos avant/après</li>
             <li>${icon('wallet')}Payez après la prestation</li>
           </ul>
         </div>
         ${quoteTicket()}
       </section>
       </div>
+
+      ${caseBand(true)}
 
       ${trustBand()}
 
@@ -3361,18 +3425,21 @@ const CZ_SIZES = [[30, 'Studio'], [45, '2 pièces'], [65, '3 pièces'], [90, '4 
 // ---------------------------------------------------------------- demande de devis (conciergeries, locaux, pros)
 const DEVIS_WHO = [
   ['cz', 'Conciergerie, location de vacances'], ['agence', 'Agence immobilière'], ['hotel', 'Hôtel, gîte, centre'],
-  ['locaux', 'Bureaux, commerce, locaux'], ['part', 'Particulier'], ['autre', 'Autre'],
+  ['locaux', 'Bureaux, commerce, locaux'], ['rs', 'Chalet ou résidence secondaire'], ['part', 'Particulier'], ['autre', 'Autre'],
 ];
 const DEVIS_NEEDS = [
   ['fin', 'Fin de séjour entre voyageurs'], ['linge', 'Lits et linge'], ['regulier', 'Ménage régulier'],
   ['grand', 'Grand nettoyage, remise en état'], ['vitres', 'Vitres'], ['bureaux', 'Bureaux et sanitaires'],
+  ['surveillance', 'Passage de surveillance (aération, chauffage, fuites)'], ['arrivee', 'Ménage avant mon arrivée'],
+  ['reassort', 'Réassort (café, papier toilette, savon)'],
 ];
-const DEVIS_RHYTHM = ['À chaque départ de voyageurs', 'Toutes les semaines', 'Plusieurs fois par semaine', 'Une seule fois', 'Je ne sais pas encore'];
+const DEVIS_RHYTHM = ['À chaque départ de voyageurs', 'Toutes les semaines', 'Toutes les deux semaines', 'Tous les mois', 'Plusieurs fois par semaine', 'Une seule fois', 'Je ne sais pas encore'];
 const DEVIS_WHEN = ['Dès que possible', 'Pour les vacances de Noël', 'Pour toute la saison d’hiver', 'À une date précise (voir détails)'];
 const PROOVA_SMS = '+33775799419';
 function devisForm(kind) {
-  const who = kind === 'locaux' ? 'locaux' : 'cz';
-  const need = kind === 'locaux' ? ['bureaux', 'regulier'] : ['fin'];
+  const who = kind === 'locaux' ? 'locaux' : kind === 'residence' ? 'rs' : 'cz';
+  const need = kind === 'locaux' ? ['bureaux', 'regulier'] : kind === 'residence' ? ['surveillance', 'arrivee'] : ['fin'];
+  const rhythmSel = kind === 'locaux' ? 'Toutes les semaines' : kind === 'residence' ? 'Tous les mois' : '';
   return html`<form class="devis-card form" data-form="devis" novalidate>
     <fieldset class="field"><legend>Vous êtes&nbsp;:</legend>
       <div class="check-grid">${DEVIS_WHO.map(([k, l]) => html`<label class="check-tile"><input type="radio" name="who" value="${k}" ${k === who ? 'checked' : ''}><span>${l}</span></label>`)}</div>
@@ -3381,10 +3448,10 @@ function devisForm(kind) {
       <div class="check-grid">${DEVIS_NEEDS.map(([k, l]) => html`<label class="check-tile"><input type="checkbox" name="need" value="${k}" ${need.includes(k) ? 'checked' : ''}><span>${l}</span></label>`)}</div>
     </fieldset>
     <label class="field"><span>Combien&nbsp;?</span>
-      <input name="size" placeholder="Ex. : 3 chalets, 5 appartements, 120 m² de bureaux" autocomplete="off"></label>
+      <input name="size" placeholder="${kind === 'residence' ? 'Ex. : chalet de 90 m², 3 chambres' : 'Ex. : 3 chalets, 5 appartements, 120 m² de bureaux'}" autocomplete="off"></label>
     <div class="grid-2">
       <label class="field"><span>À quel rythme&nbsp;?</span>
-        <select name="rhythm">${DEVIS_RHYTHM.map((r, i) => html`<option ${kind === 'locaux' && i === 1 ? 'selected' : ''}>${r}</option>`)}</select></label>
+        <select name="rhythm">${DEVIS_RHYTHM.map((r) => html`<option ${r === rhythmSel ? 'selected' : ''}>${r}</option>`)}</select></label>
       <label class="field"><span>Pour quand&nbsp;?</span>
         <select name="when">${DEVIS_WHEN.map((r) => html`<option>${r}</option>`)}</select></label>
     </div>
@@ -3448,7 +3515,7 @@ VIEWS.devis = {
   title: () => 'Demande de devis gratuit',
   render() {
     if (!S.country && !S.session) saveCountry('FR');
-    const kind = /locaux/.test(location.hash) ? 'locaux' : 'cz';
+    const kind = /locaux/.test(location.hash) ? 'locaux' : /residence/.test(location.hash) ? 'residence' : 'cz';
     return html`${demoBar()}
     <header class="site-top">
       <a href="#accueil" class="logo-link" aria-label="Accueil Proova">${logo()}</a>
@@ -3457,7 +3524,7 @@ VIEWS.devis = {
     <main id="main" class="devis-page">
       <div class="devis-head">
         <p class="pick-kicker">${icon('check')}Gratuit · Sans engagement · 1 minute</p>
-        <h1>${kind === 'locaux' ? 'Le ménage de vos locaux, sur devis' : 'Vos ménages de conciergerie, sur devis'}</h1>
+        <h1>${kind === 'locaux' ? 'Le ménage de vos locaux, sur devis' : kind === 'residence' ? 'Votre chalet surveillé et prêt à votre arrivée' : 'Vos ménages de conciergerie, sur devis'}</h1>
         <p class="pick-lead">Notez vos besoins, on vous rappelle avec un prix clair. Jeune entreprise du Haut-Jura, équipe qualifiée, on s’adapte à vos disponibilités.</p>
       </div>
       ${winterOfferCard()}
@@ -3503,12 +3570,15 @@ VIEWS.concierge = {
           </div>
           <ul class="pick-trust">
             <li>${icon('check')}Devis gratuit</li>
+            <li>${icon('camera')}Photos avant/après</li>
             <li>${icon('medal')}Personnel qualifié</li>
             <li>${icon('calendar')}Du lundi au samedi</li>
           </ul>
         </div>
       </section>
       </div>
+
+      ${caseBand()}
 
       <section class="band b2b" aria-labelledby="cz-who">
         <p class="b2b-kicker">Pour qui&nbsp;?</p>
