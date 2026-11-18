@@ -1024,6 +1024,9 @@ a.mini-main:hover strong { text-decoration: underline; text-underline-offset: 3p
   .pick-badge { top: 10px; right: 10px; font-size: 11px; padding: 2px 8px; }
 }
 @media (max-width: 560px) { .trust-grid { grid-template-columns: 1fr; } }
+/* Photo d'équipe en polo Proova */
+.team-photo { margin: 24px 0 0; border-radius: var(--r-lg); overflow: hidden; max-width: 820px; box-shadow: 0 10px 30px rgba(15, 39, 65, .12); }
+.team-photo img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; }
 /* « Selon votre cas » : les 3 promesses Proova */
 .case-grid { margin-top: 28px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .case-card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--r-lg); padding: 24px 22px; display: grid; gap: 10px; align-content: start; }
@@ -3005,6 +3008,8 @@ function caseBand(onHome) {
   </section>`;
 }
 // Bloc « jeune entreprise, équipe qualifiée »
+const teamPhoto = () => html`<figure class="team-photo"><img src="media/equipe.jpg" width="1400" height="933" loading="lazy" decoding="async"
+  alt="Une femme et un homme souriants, en polo noir Proova Nettoyage"></figure>`;
 function trustCards() {
   return html`<div class="trust-grid">
     <article class="trust-card">${icon('medal')}<h3>Personnel qualifié</h3>
@@ -3022,6 +3027,7 @@ function trustBand() {
     <h2 id="trust-t">Une jeune entreprise locale, une équipe qualifiée</h2>
     <p class="trust-lead">Proova est née en 2026 dans le Haut-Jura, avec une idée simple : un ménage professionnel, sans négociation
       ni mauvaise surprise, pour les particuliers comme pour les professionnels, côté France comme côté Suisse.</p>
+    ${teamPhoto()}
     ${trustCards()}
   </section>`;
 }
@@ -3598,6 +3604,7 @@ VIEWS.concierge = {
         <h2 id="cz-team">Une jeune entreprise locale, une équipe qualifiée</h2>
         <p class="trust-lead">Proova est née en 2026 dans le Haut-Jura. On connaît les rotations du samedi, les chalets à préparer
           et les clés à récupérer : on s’organise avec vous pour que chaque logement et chaque local soit prêt à l’heure.</p>
+        ${teamPhoto()}
         ${trustCards()}
       </section>
 
